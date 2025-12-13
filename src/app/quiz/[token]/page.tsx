@@ -49,8 +49,8 @@ export default function PublicQuizPage() {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (timeLeft === 0) {
-      // Time's up - auto submit
-      handleSubmitQuiz();
+      // Time's up - auto submit (allow empty answers)
+      handleSubmitQuiz(true);
     }
   }, [timeLeft, showQuiz]);
 
@@ -331,7 +331,28 @@ export default function PublicQuizPage() {
     }
   };
 
-  const handleSubmitQuiz = async () => {
+  const handleSubmitQuiz = async (isAutoSubmit: boolean = false) => {
+    // Validate all questions are answered for manual submit
+    if (!isAutoSubmit) {
+      const unansweredQuestions: number[] = [];
+      questions.forEach((question) => {
+        const answer = currentAnswers[question.id];
+        const hasAnswer = Array.isArray(answer) 
+          ? answer.length > 0 
+          : answer?.toString().trim().length > 0;
+        
+        if (!hasAnswer) {
+          unansweredQuestions.push(question.id);
+        }
+      });
+      
+      if (unansweredQuestions.length > 0) {
+        setError(`Mohon jawab semua pertanyaan. ${unansweredQuestions.length} pertanyaan belum dijawab.`);
+        setShowConfirmSubmit(false);
+        return;
+      }
+    }
+    
     setIsSubmitting(true);
     try {
       // Final submit with all answers
@@ -369,7 +390,12 @@ export default function PublicQuizPage() {
         // Show completion message instead of redirecting
         setShowQuiz(false);
         setError(null);
-        alert(`Anda telah menyelesaikan quiz. NIJ: ${participantInfo.nij}`);
+        
+        const message = isAutoSubmit 
+          ? `Waktu habis! Quiz telah di-submit otomatis.\n${answeredCount} dari ${questions.length} pertanyaan terjawab.\nNIJ: ${participantInfo.nij}`
+          : `Anda telah menyelesaikan quiz.\n${answeredCount} dari ${questions.length} pertanyaan terjawab.\nNIJ: ${participantInfo.nij}`;
+        
+        alert(message);
       } else {
         setError('Gagal mengirim jawaban. Silakan coba lagi.');
       }
@@ -473,7 +499,7 @@ export default function PublicQuizPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Email *
               </label>
               <input
@@ -492,7 +518,7 @@ export default function PublicQuizPage() {
                     setValidationErrors(prev => ({...prev, email: error}));
                   }
                 }}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                className={`w-full px-3 py-2 text-sm sm:text-base border rounded-md focus:outline-none focus:ring-2 ${
                   validationErrors.email 
                     ? 'border-red-300 focus:ring-red-500' 
                     : 'border-gray-300 focus:ring-blue-500'
@@ -501,12 +527,12 @@ export default function PublicQuizPage() {
                 required
               />
               {validationErrors.email && (
-                <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
+                <p className="text-red-500 text-xs sm:text-sm mt-1">{validationErrors.email}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Nama Lengkap *
               </label>
               <input
@@ -525,7 +551,7 @@ export default function PublicQuizPage() {
                     setValidationErrors(prev => ({...prev, name: error}));
                   }
                 }}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                className={`w-full px-3 py-2 text-sm sm:text-base border rounded-md focus:outline-none focus:ring-2 ${
                   validationErrors.name 
                     ? 'border-red-300 focus:ring-red-500' 
                     : 'border-gray-300 focus:ring-blue-500'
@@ -534,12 +560,12 @@ export default function PublicQuizPage() {
                 required
               />
               {validationErrors.name && (
-                <p className="text-red-500 text-sm mt-1">{validationErrors.name}</p>
+                <p className="text-red-500 text-xs sm:text-sm mt-1">{validationErrors.name}</p>
               )}
             </div>
 
             {error && (
-              <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm">
+              <div className="bg-red-50 text-red-700 p-2 sm:p-3 rounded-md text-xs sm:text-sm">
                 {error}
               </div>
             )}
@@ -547,7 +573,7 @@ export default function PublicQuizPage() {
             <button
               onClick={handleStartQuiz}
               disabled={isStarting || !participantInfo.nij || !participantInfo.email || !participantInfo.name || Object.values(validationErrors).some(error => error) || hasSubmittedBefore}
-              className={`w-full py-3 px-4 rounded-md font-medium ${
+              className={`w-full py-2.5 sm:py-3 px-4 rounded-md text-sm sm:text-base font-medium ${
                 isStarting || !participantInfo.nij || !participantInfo.email || !participantInfo.name || Object.values(validationErrors).some(error => error) || hasSubmittedBefore
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -586,52 +612,65 @@ export default function PublicQuizPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header with Timer */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 py-3">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">{quiz.title}</h1>
-              <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                <span>Question {currentQuestionIndex + 1} of {questions.length}</span>
+      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base sm:text-xl font-semibold text-gray-900 truncate">{quiz.title}</h1>
+              <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 mt-1">
+                <span>Q {currentQuestionIndex + 1}/{questions.length}</span>
                 <span>•</span>
-                <span>Answered: {answeredCount}/{questions.length}</span>
+                <span>✓ {answeredCount}/{questions.length}</span>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 self-start sm:self-auto">
               {/* Timer */}
-              <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
+              <div className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full ${
                 (timeLeft || 0) <= 300 ? 'bg-red-100 text-red-800' :
                 (timeLeft || 0) <= 600 ? 'bg-yellow-100 text-yellow-800' :
                 'bg-green-100 text-green-800'
               }`}>
-                <span className="text-lg">⏰</span>
-                <span className="font-mono font-semibold">
+                <span className="text-base sm:text-lg">⏰</span>
+                <span className="font-mono text-xs sm:text-base font-semibold">
                   {formatTime(timeLeft || 0)}
                 </span>
               </div>
             </div>
           </div>
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-start gap-2">
+            <span className="text-lg">⚠️</span>
+            <p className="text-sm flex-1">{error}</p>
+            <button 
+              onClick={() => setError(null)}
+              className="text-red-700 hover:text-red-900"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        
         </div>
       </div>
 
       {/* Questions Content */}
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="space-y-6">
+      <div className="max-w-4xl mx-auto p-3 sm:p-6">
+        <div className="space-y-4 sm:space-y-6">
           {currentPageQuestions.map((question, pageIndex) => {
             const questionNumber = startIndex + pageIndex + 1;
             const questionAnswer = currentAnswers[question.id];
             
             return (
-              <div key={question.id} className="bg-white rounded-lg shadow p-6">
-                <div className="mb-6">
-                  <div className="mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">
+              <div key={question.id} className="bg-white rounded-lg shadow p-4 sm:p-6">
+                <div className="mb-4 sm:mb-6">
+                  <div className="mb-3 sm:mb-4">
+                    <h2 className="text-base sm:text-lg font-medium text-gray-900">
                       Question {questionNumber}
                     </h2>
                   </div>
                   
-                  <p className="text-gray-800 text-lg leading-relaxed">
+                  <p className="text-gray-800 text-sm sm:text-lg leading-relaxed">
                     {(question as any).questionText || (question as any).question || (question as any).text || 'Question text'}
                   </p>
 
@@ -649,47 +688,47 @@ export default function PublicQuizPage() {
                 </div>
 
                 {/* Answer Options */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {(question as any).questionType === 'multiple-choice' && (question as any).options && (
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {(question as any).options.map((option: string, index: number) => (
-                        <label key={index} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                        <label key={index} className="flex items-start space-x-2 sm:space-x-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                           <input
                             type="radio"
                             name={`question_${question.id}`}
                             value={option}
                             checked={questionAnswer === option}
                             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                            className="h-4 w-4 text-blue-600"
+                            className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0"
                           />
-                          <span className="flex-1 text-gray-900">{option}</span>
+                          <span className="flex-1 text-sm sm:text-base text-gray-900">{option}</span>
                         </label>
                       ))}
                     </div>
                   )}
 
                   {(question as any).questionType === 'multiple-select' && (question as any).options && (
-                    <div className="space-y-3">
-                      <p className="text-sm text-gray-600 mb-3">📝 Pilih semua jawaban yang benar (bisa lebih dari satu)</p>
+                    <div className="space-y-2 sm:space-y-3">
+                      <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">📝 Pilih semua jawaban yang benar (bisa lebih dari satu)</p>
                       {(question as any).options.map((option: string, index: number) => {
                         const currentAnswerArray = Array.isArray(questionAnswer) ? questionAnswer : [];
                         const isChecked = currentAnswerArray.includes(option);
                         
                         return (
-                          <label key={index} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                          <label key={index} className="flex items-start space-x-2 sm:space-x-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                             <input
                               type="checkbox"
                               value={option}
                               checked={isChecked}
                               onChange={(e) => handleMultipleAnswerChange(question.id, option, e.target.checked)}
-                              className="h-4 w-4 text-blue-600 rounded"
+                              className="h-4 w-4 text-blue-600 rounded mt-0.5 flex-shrink-0"
                             />
-                            <span className="flex-1 text-gray-900">{option}</span>
+                            <span className="flex-1 text-sm sm:text-base text-gray-900">{option}</span>
                           </label>
                         );
                       })}
                       {Array.isArray(questionAnswer) && questionAnswer.length > 0 && (
-                        <div className="mt-2 p-2 bg-blue-50 rounded text-sm text-blue-700">
+                        <div className="mt-2 p-2 bg-blue-50 rounded text-xs sm:text-sm text-blue-700">
                           Dipilih: {questionAnswer.length} jawaban
                         </div>
                       )}
@@ -697,18 +736,18 @@ export default function PublicQuizPage() {
                   )}
 
                   {(question as any).questionType === 'true-false' && (
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {['true', 'false'].map((option) => (
-                        <label key={option} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                        <label key={option} className="flex items-center space-x-2 sm:space-x-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                           <input
                             type="radio"
                             name={`question_${question.id}`}
                             value={option}
                             checked={questionAnswer === option}
                             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                            className="h-4 w-4 text-blue-600"
+                            className="h-4 w-4 text-blue-600 flex-shrink-0"
                           />
-                          <span className="flex-1 text-gray-900 capitalize">{option}</span>
+                          <span className="flex-1 text-sm sm:text-base text-gray-900 capitalize">{option}</span>
                         </label>
                       ))}
                     </div>
@@ -719,7 +758,7 @@ export default function PublicQuizPage() {
                       <textarea
                         value={questionAnswer || ''}
                         onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         rows={4}
                         placeholder="Type your answer here..."
                       />
@@ -732,36 +771,42 @@ export default function PublicQuizPage() {
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-between items-center mt-6">
+        <div className={`flex flex-col sm:flex-row sm:justify-between items-stretch sm:items-center gap-3 sm:gap-4 mt-4 sm:mt-6 ${
+          timeLeft !== null && timeLeft <= 60 ? 'mb-24' : ''
+        }`}>
           <button
             onClick={() => setCurrentPage(currentPage - 1)}
             disabled={currentPage === 0}
-            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 sm:px-4 py-2 text-sm sm:text-base text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed order-1"
           >
-            ← Previous Page
+            <span className="hidden sm:inline">← Previous Page</span>
+            <span className="sm:hidden">← Prev</span>
           </button>
 
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              Page {currentPage + 1} of {totalPages} ({questions.length} questions)
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 order-3 sm:order-2">
+            <span className="text-xs sm:text-sm text-gray-600 text-center">
+              <span className="hidden sm:inline">Page {currentPage + 1} of {totalPages} ({questions.length} questions)</span>
+              <span className="sm:hidden">Page {currentPage + 1}/{totalPages}</span>
             </span>
             
             {currentPage < totalPages - 1 && (
               <button
                 onClick={() => setCurrentPage(currentPage + 1)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 text-sm sm:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-                Next Page →
+                <span className="hidden sm:inline">Next Page →</span>
+                <span className="sm:hidden">Next →</span>
               </button>
             )}
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 order-2 sm:order-3">
             <button
               onClick={() => setShowConfirmSubmit(true)}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="flex-1 sm:flex-none px-4 sm:px-6 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
-              Submit Quiz
+              <span className="hidden sm:inline">Submit Quiz</span>
+              <span className="sm:hidden">Submit</span>
             </button>
           </div>
         </div>
@@ -772,27 +817,35 @@ export default function PublicQuizPage() {
 
       {/* Confirm Submit Modal */}
       {showConfirmSubmit && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Confirm Submission</h2>
-            <p className="text-gray-600 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3">
+          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Confirm Submission</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">
               Are you sure you want to submit your quiz? You have answered {answeredCount} out of {questions.length} questions.
             </p>
-            <p className="text-sm text-gray-500 mb-6">
+            {answeredCount < questions.length && (
+              <p className="text-xs sm:text-sm text-red-600 font-medium mb-2">
+                ⚠️ {questions.length - answeredCount} pertanyaan belum dijawab!
+              </p>
+            )}
+            <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6">
               Time remaining: {formatTime(timeLeft || 0)}
             </p>
             
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <button
-                onClick={() => setShowConfirmSubmit(false)}
-                className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                onClick={() => {
+                  setShowConfirmSubmit(false);
+                  setError(null);
+                }}
+                className="flex-1 px-4 py-2 text-sm sm:text-base text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
               >
                 Continue Quiz
               </button>
               <button
-                onClick={handleSubmitQuiz}
+                onClick={() => handleSubmitQuiz(false)}
                 disabled={isSubmitting}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300"
+                className="flex-1 px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300"
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
               </button>
@@ -803,12 +856,12 @@ export default function PublicQuizPage() {
 
       {/* Auto-submit Warning */}
       {timeLeft !== null && timeLeft <= 60 && timeLeft > 0 && showQuiz && (
-        <div className="fixed bottom-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-lg">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">⚠️</span>
+        <div className="fixed bottom-3 sm:bottom-4 left-3 right-3 sm:left-auto sm:right-4 bg-red-600 text-white p-3 sm:p-4 rounded-lg shadow-lg max-w-sm sm:max-w-md mx-auto sm:mx-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-xl sm:text-2xl">⚠️</span>
             <div>
-              <p className="font-semibold">Time Running Out!</p>
-              <p className="text-sm">Quiz will auto-submit in {timeLeft} seconds</p>
+              <p className="text-sm sm:text-base font-semibold">Time Running Out!</p>
+              <p className="text-xs sm:text-sm">Quiz will auto-submit in {timeLeft} seconds</p>
             </div>
           </div>
         </div>

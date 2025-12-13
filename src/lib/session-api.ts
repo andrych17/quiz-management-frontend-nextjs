@@ -4,9 +4,7 @@ import {
   SessionStatusResponse, 
   SessionActionResponse 
 } from '@/types';
-
-// Base API URL from environment or fallback
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+import { API_BASE_URL } from './constants/api';
 
 // API client for quiz session management
 export class QuizSessionAPI {
@@ -14,7 +12,7 @@ export class QuizSessionAPI {
     endpoint: string, 
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${API_BASE_URL}/api${endpoint}`;
+    const url = `${API_BASE_URL}${endpoint}`;
     
     const defaultHeaders = {
       'Content-Type': 'application/json',

@@ -12,9 +12,9 @@ export async function GET() {
     });
 
     if (!response.ok) {
-      // If backend endpoint doesn't exist, return mock stats
-      console.log('Backend stats endpoint not available, using mock data');
-      const mockStats = {
+      // Backend endpoint not available
+      console.log('Backend stats endpoint not available');
+      const emptyStats = {
         totalUsers: 0,
         totalAttempts: 0,
         passedAttempts: 0,
@@ -22,15 +22,15 @@ export async function GET() {
         totalQuizzes: 0,
         publishedQuizzes: 0
       };
-      return NextResponse.json(mockStats);
+      return NextResponse.json(emptyStats);
     }
 
     const stats = await response.json();
     return NextResponse.json(stats);
   } catch (error) {
     console.error('Error fetching admin stats:', error);
-    // Return mock stats on error
-    const mockStats = {
+    // Return empty stats on error
+    const emptyStats = {
       totalUsers: 0,
       totalAttempts: 0,
       passedAttempts: 0,
@@ -38,6 +38,6 @@ export async function GET() {
       totalQuizzes: 0,
       publishedQuizzes: 0
     };
-    return NextResponse.json(mockStats);
+    return NextResponse.json(emptyStats);
   }
 }
