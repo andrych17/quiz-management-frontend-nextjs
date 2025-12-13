@@ -255,13 +255,23 @@ export default function QuizDetailPage({ params }: PageProps) {
           // Convert questionType from backend format (multiple-choice) to frontend format (multiple_choice)
           const frontendQuestionType = q.questionType ? q.questionType.replace(/-/g, '_') : 'multiple_choice';
           
+          // For multiple choice, convert option values to indices
+          let correctAnswerArray = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer].filter(Boolean);
+          
+          if (frontendQuestionType === 'multiple_choice' && q.options && correctAnswerArray.length > 0) {
+            correctAnswerArray = correctAnswerArray.map((answer: string) => {
+              const optionIndex = q.options.indexOf(answer);
+              return optionIndex >= 0 ? optionIndex.toString() : answer;
+            });
+          }
+          
           return {
             id: q.id,
             questionText: q.questionText || '',
             questionType: frontendQuestionType as QuestionType,
             imageUrl: q.imageUrl || '',
             options: q.options || [],
-            correctAnswer: q.correctAnswer || [],
+            correctAnswer: correctAnswerArray,
             points: q.points || 1,
             order: q.order !== undefined ? q.order : index,
             isRequired: q.isRequired !== undefined ? q.isRequired : true,
@@ -348,28 +358,56 @@ export default function QuizDetailPage({ params }: PageProps) {
             order: index,
           };
           
-          // Add correctAnswer (singular, string) if not essay and has valid answer
-          if (q.questionType !== 'essay') {
+          // Add correctAnswer based on question type
+          if (q.questionType === 'essay') {
+            // For essay questions, always set empty string
+            questionData.correctAnswer = '';
+          } else if (q.questionType === 'multiple_choice') {
+            // For multiple choice, convert indices back to actual option values
             if (Array.isArray(q.correctAnswer)) {
-              // Handle array format (multiple answers)
+              const validAnswers = q.correctAnswer
+                .map(a => {
+                  // Check if it's an index (numeric string)
+                  const index = parseInt(a);
+                  if (!isNaN(index) && index >= 0 && index < filteredOptions.length) {
+                    return filteredOptions[index];
+                  }
+                  // Otherwise use the value directly (for backward compatibility)
+                  return a;
+                })
+                .filter(a => a && a.trim() !== '');
+              
+              if (validAnswers.length > 0) {
+                questionData.correctAnswer = validAnswers[0];
+              } else {
+                questionData.correctAnswer = '';
+              }
+            } else {
+              questionData.correctAnswer = '';
+            }
+          } else {
+            // For other question types (true_false), correctAnswer is required
+            if (Array.isArray(q.correctAnswer)) {
               const validAnswers = q.correctAnswer.filter(a => a && a.trim() !== '');
               if (validAnswers.length > 0) {
-                // Backend expects string, so join array or take first valid answer
                 questionData.correctAnswer = validAnswers[0];
+              } else {
+                questionData.correctAnswer = '';
               }
             } else if (typeof q.correctAnswer === 'string' && (q.correctAnswer as string).trim() !== '') {
-              // Handle string format (single answer) 
               questionData.correctAnswer = q.correctAnswer as string;
+            } else {
+              questionData.correctAnswer = '';
             }
-            
-            // Log for debugging
-            console.log(`Question ${index + 1} correctAnswer:`, {
-              original: q.correctAnswer,
-              type: typeof q.correctAnswer,
-              isArray: Array.isArray(q.correctAnswer),
-              final: questionData.correctAnswer
-            });
           }
+            
+          // Log for debugging
+          console.log(`Question ${index + 1} correctAnswer:`, {
+            original: q.correctAnswer,
+            type: typeof q.correctAnswer,
+            isArray: Array.isArray(q.correctAnswer),
+            final: questionData.correctAnswer
+          });
           
           return questionData;
         });
@@ -501,12 +539,50 @@ export default function QuizDetailPage({ params }: PageProps) {
             order: index,
           };
           
-          // Add correctAnswer (singular, string) if not essay and has valid answer
-          if (q.questionType !== 'essay' && Array.isArray(q.correctAnswer)) {
-            const validAnswers = q.correctAnswer.filter(a => a && a.trim() !== '');
-            if (validAnswers.length > 0) {
-              // Backend expects string, so join array or take first valid answer
-              questionData.correctAnswer = validAnswers[0];
+          // Add correctAnswer based on question type
+          if (q.questionType === 'essay') {
+            // For essay questions, always set empty string
+            questionData.correctAnswer = '';
+          } else if (q.questionType === 'multiple_choice') {
+            // For multiple choice, convert indices back to actual option values
+            const answerValue: any = q.correctAnswer;
+            const options = questionData.options || [];
+            
+            if (Array.isArray(answerValue)) {
+              const validAnswers = answerValue
+                .map((a: any) => {
+                  // Check if it's an index (numeric string)
+                  const idx = parseInt(a);
+                  if (!isNaN(idx) && idx >= 0 && idx < options.length) {
+                    return options[idx];
+                  }
+                  // Otherwise use the value directly
+                  return a;
+                })
+                .filter((a: any) => a && a.trim() !== '');
+              
+              if (validAnswers.length > 0) {
+                questionData.correctAnswer = validAnswers[0];
+              } else {
+                questionData.correctAnswer = '';
+              }
+            } else {
+              questionData.correctAnswer = '';
+            }
+          } else {
+            // For other question types (true_false), correctAnswer is required
+            const answerValue: any = q.correctAnswer;
+            if (Array.isArray(answerValue)) {
+              const validAnswers = answerValue.filter((a: any) => a && a.trim() !== '');
+              if (validAnswers.length > 0) {
+                questionData.correctAnswer = validAnswers[0];
+              } else {
+                questionData.correctAnswer = '';
+              }
+            } else if (answerValue && typeof answerValue === 'string' && answerValue.trim() !== '') {
+              questionData.correctAnswer = answerValue.trim();
+            } else {
+              questionData.correctAnswer = '';
             }
           }
           
@@ -674,8 +750,19 @@ export default function QuizDetailPage({ params }: PageProps) {
   const removeOptionFromEditingQuestion = (index: number) => {
     if (!editingQuestion || editingQuestion.options.length <= 2) return;
     const newOptions = editingQuestion.options.filter((_, i) => i !== index);
-    // Remove from correct answers if it was selected
-    const newcorrectAnswer = editingQuestion.correctAnswer.filter(a => a !== editingQuestion.options[index]);
+    
+    // Remove from correct answers and update indices
+    const newcorrectAnswer = editingQuestion.correctAnswer
+      .filter(a => a !== index.toString()) // Remove the deleted option's index
+      .map(a => {
+        // Update indices that come after the deleted one
+        const idx = parseInt(a);
+        if (!isNaN(idx) && idx > index) {
+          return (idx - 1).toString();
+        }
+        return a;
+      });
+    
     setEditingQuestion({
       ...editingQuestion,
       options: newOptions,
@@ -683,7 +770,7 @@ export default function QuizDetailPage({ params }: PageProps) {
     });
   };
 
-  const toggleCorrectAnswer = (option: string) => {
+  const toggleCorrectAnswer = (option: string, optionIndex?: number) => {
     if (!editingQuestion) return;
     
     // Don't allow selecting empty options
@@ -691,10 +778,16 @@ export default function QuizDetailPage({ params }: PageProps) {
       return;
     }
     
-    const isSelected = editingQuestion.correctAnswer.includes(option);
+    // For multiple choice, use index to avoid duplicate value issues
+    // For true/false, use the actual value
+    const identifier = editingQuestion.questionType === 'multiple_choice' && optionIndex !== undefined
+      ? optionIndex.toString()
+      : option;
+    
+    const isSelected = editingQuestion.correctAnswer.includes(identifier);
     const newcorrectAnswer = isSelected
-      ? editingQuestion.correctAnswer.filter(a => a !== option)
-      : [...editingQuestion.correctAnswer, option];
+      ? editingQuestion.correctAnswer.filter(a => a !== identifier)
+      : [...editingQuestion.correctAnswer, identifier];
     setEditingQuestion({
       ...editingQuestion,
       correctAnswer: newcorrectAnswer,
@@ -732,7 +825,17 @@ export default function QuizDetailPage({ params }: PageProps) {
   };
 
   const handleGenerateDefaultScoring = () => {
-    // Generate default scoring based on example data provided
+    // Check if there's existing scoring data
+    if (scoringMap.length > 0) {
+      const confirmed = window.confirm(
+        `Anda sudah memiliki ${scoringMap.length} data scoring. Generate template default akan MENGHAPUS semua data scoring yang ada dan menggantinya dengan template baru (0-35 jawaban benar). Lanjutkan?`
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    // Generate default scoring template based on standard conversion table
     const defaultScoring = [
       {correctAnswer: 0, score: 73}, {correctAnswer: 1, score: 73}, {correctAnswer: 2, score: 73},
       {correctAnswer: 3, score: 73}, {correctAnswer: 4, score: 73}, {correctAnswer: 5, score: 73},
@@ -747,9 +850,11 @@ export default function QuizDetailPage({ params }: PageProps) {
       {correctAnswer: 30, score: 120}, {correctAnswer: 31, score: 120}, {correctAnswer: 32, score: 123},
       {correctAnswer: 33, score: 125}, {correctAnswer: 34, score: 132}, {correctAnswer: 35, score: 139},
     ];
+    
+    // Replace all existing scoring with default template
     setScoringMap(defaultScoring);
     setHasUnsavedChanges(true);
-    alert('Default scoring template berhasil di-generate untuk 0-35 jawaban benar!');
+    alert('✅ Default scoring template berhasil di-generate!\n\n36 mapping (0-35 jawaban benar) telah dibuat.\nJangan lupa SAVE untuk menyimpan perubahan.');
   };
 
   if (!quizId || loading) {
@@ -1169,23 +1274,26 @@ export default function QuizDetailPage({ params }: PageProps) {
 
                         {question.questionType === 'multiple_choice' && question.options.length > 0 && (
                           <div className="mt-2 space-y-1">
-                            {question.options.map((option, optIndex) => (
-                              <div key={optIndex} className="flex items-center gap-2 text-sm">
-                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
-                                  question.correctAnswer.includes(option)
-                                    ? 'bg-green-100 text-green-700 font-semibold'
-                                    : 'bg-gray-200 text-gray-600'
-                                }`}>
-                                  {String.fromCharCode(65 + optIndex)}
-                                </span>
-                                <span className={question.correctAnswer.includes(option) ? 'font-medium' : ''}>
-                                  {option}
-                                </span>
-                                {question.correctAnswer.includes(option) && (
-                                  <CheckCircle className="w-3 h-3 text-green-600 ml-1" />
-                                )}
-                              </div>
-                            ))}
+                            {question.options.map((option, optIndex) => {
+                              const isCorrect = question.correctAnswer.includes(optIndex.toString()) || question.correctAnswer.includes(option);
+                              return (
+                                <div key={optIndex} className="flex items-center gap-2 text-sm">
+                                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                                    isCorrect
+                                      ? 'bg-green-100 text-green-700 font-semibold'
+                                      : 'bg-gray-200 text-gray-600'
+                                  }`}>
+                                    {String.fromCharCode(65 + optIndex)}
+                                  </span>
+                                  <span className={isCorrect ? 'font-medium' : ''}>
+                                    {option}
+                                  </span>
+                                  {isCorrect && (
+                                    <CheckCircle className="w-3 h-3 text-green-600 ml-1" />
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
 

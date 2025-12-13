@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse } from '@/types/api';
 
-// Mock detailed attempt data
-const mockDetailedAttempt = {
+// TODO: Connect to real backend API
+const mockDetailedAttempt: any = null;
+
+const _REMOVED_MOCKDATA = {
   id: 1,
   participantName: 'John Doe',
   email: 'john.doe@example.com',
@@ -133,16 +135,12 @@ export async function GET(
       return NextResponse.json(response, { status: 400 });
     }
     
-    // For demo purposes, return the mock data for any ID
-    // In real implementation, this would fetch from database
+    // TODO: Connect to real backend API
+    console.log('⚠️ Mock data removed - connect to real backend');
     const response: ApiResponse = {
-      success: true,
-      message: 'Attempt details retrieved successfully',
-      data: {
-        ...mockDetailedAttempt,
-        id: attemptId, // Use the requested ID
-      },
-      statusCode: 200,
+      success: false,
+      message: 'Backend API not configured. Please connect to real backend endpoint.',
+      statusCode: 503,
       timestamp: new Date().toISOString()
     };
 

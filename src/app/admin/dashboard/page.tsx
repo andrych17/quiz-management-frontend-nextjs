@@ -81,13 +81,8 @@ export default function AdminDashboard() {
     loadDashboardData();
   }, [isAuthenticated]);
 
-  const [recentActivity] = useState([
-    { id: 1, type: "quiz_completed", user: "Alice Johnson", quiz: "Logic Test - Pelayanan Anak", time: "2 minutes ago", score: 92 },
-    { id: 2, type: "new_participant", user: "Bob Smith", quiz: "Leadership Assessment", time: "15 minutes ago", score: null },
-    { id: 3, type: "quiz_completed", user: "Carol Wilson", quiz: "Ministry Evaluation", time: "1 hour ago", score: 78 },
-    { id: 4, type: "quiz_created", user: "Admin", quiz: "New Youth Assessment", time: "3 hours ago", score: null },
-    { id: 5, type: "quiz_completed", user: "David Brown", quiz: "Logic Test - Pelayanan Anak", time: "5 hours ago", score: 88 }
-  ]);
+  // TODO: Load from real backend API
+  const [recentActivity] = useState<any[]>([]);
 
   // Show loading state
   if (isLoading || loading) {
@@ -134,9 +129,9 @@ export default function AdminDashboard() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">📊 Dashboard</h1>
-        <p className="text-gray-600 mt-2">
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">📊 Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
           Welcome back, {user?.name || user?.email || 'Admin'}! 
           {isSuperadmin && " You have full system access."}
           {isAdmin && " Here are your assigned quizzes."}
@@ -153,100 +148,100 @@ export default function AdminDashboard() {
       </div>
 
       {/* Key Statistics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-4 sm:mb-8">
         {/* Total Quizzes */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <div className="flex items-center">
-            <div className="p-3 bg-blue-100 rounded-full">
-              <span className="text-blue-600 text-2xl">📝</span>
+            <div className="p-2 sm:p-3 bg-blue-100 rounded-full flex-shrink-0">
+              <span className="text-blue-600 text-xl sm:text-2xl">📝</span>
             </div>
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-600">
+            <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+              <h3 className="text-xs sm:text-sm font-medium text-gray-600 truncate">
                 {canAccessAllQuizzes ? 'All Quizzes' : 'My Assigned Quizzes'}
               </h3>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalQuizzes}</p>
-              <p className="text-sm text-green-600">{stats.activeQuizzes} active</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalQuizzes}</p>
+              <p className="text-xs sm:text-sm text-green-600">{stats.activeQuizzes} active</p>
             </div>
           </div>
         </div>
 
         {/* Total Users - Only show for superadmin */}
         {canManageUsers && (
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex items-center">
-              <div className="p-3 bg-purple-100 rounded-full">
-                <span className="text-purple-600 text-2xl">👥</span>
+              <div className="p-2 sm:p-3 bg-purple-100 rounded-full flex-shrink-0">
+                <span className="text-purple-600 text-xl sm:text-2xl">👥</span>
               </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-600">Admin Users</h3>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
-                <p className="text-sm text-blue-600">System wide</p>
+              <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                <h3 className="text-xs sm:text-sm font-medium text-gray-600">Admin Users</h3>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                <p className="text-xs sm:text-sm text-blue-600">System wide</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Total Participants */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <div className="flex items-center">
-            <div className="p-3 bg-green-100 rounded-full">
-              <span className="text-green-600 text-2xl">�</span>
+            <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0">
+              <span className="text-green-600 text-xl sm:text-2xl">💁</span>
             </div>
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-600">Total Participants</h3>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalParticipants}</p>
-              <p className="text-sm text-green-600">{stats.completedToday} today</p>
+            <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+              <h3 className="text-xs sm:text-sm font-medium text-gray-600">Total Participants</h3>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalParticipants}</p>
+              <p className="text-xs sm:text-sm text-green-600">{stats.completedToday} today</p>
             </div>
           </div>
         </div>
 
         {/* Average Score */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <div className="flex items-center">
-            <div className="p-3 bg-yellow-100 rounded-full">
-              <span className="text-yellow-600 text-2xl">⭐</span>
+            <div className="p-2 sm:p-3 bg-yellow-100 rounded-full flex-shrink-0">
+              <span className="text-yellow-600 text-xl sm:text-2xl">⭐</span>
             </div>
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-600">Average Score</h3>
-              <p className="text-2xl font-bold text-gray-900">{stats.avgScore}%</p>
-              <p className="text-sm text-blue-600">Across all tests</p>
+            <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+              <h3 className="text-xs sm:text-sm font-medium text-gray-600">Average Score</h3>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.avgScore}%</p>
+              <p className="text-xs sm:text-sm text-blue-600">Across all tests</p>
             </div>
           </div>
         </div>
 
         {/* Today's Activity */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <div className="flex items-center">
-            <div className="p-3 bg-orange-100 rounded-full">
-              <span className="text-orange-600 text-2xl">📈</span>
+            <div className="p-2 sm:p-3 bg-orange-100 rounded-full flex-shrink-0">
+              <span className="text-orange-600 text-xl sm:text-2xl">📈</span>
             </div>
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-600">Completed Today</h3>
-              <p className="text-2xl font-bold text-gray-900">{stats.completedToday}</p>
-              <p className="text-sm text-green-600">+25% from yesterday</p>
+            <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+              <h3 className="text-xs sm:text-sm font-medium text-gray-600">Completed Today</h3>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.completedToday}</p>
+              <p className="text-xs sm:text-sm text-green-600">+25% from yesterday</p>
             </div>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <div className="flex items-center">
-            <div className="p-3 bg-indigo-100 rounded-full">
-              <span className="text-indigo-600 text-2xl">⚡</span>
+            <div className="p-2 sm:p-3 bg-indigo-100 rounded-full flex-shrink-0">
+              <span className="text-indigo-600 text-xl sm:text-2xl">⚡</span>
             </div>
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-600">Quick Actions</h3>
+            <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+              <h3 className="text-xs sm:text-sm font-medium text-gray-600">Quick Actions</h3>
               <div className="mt-2 space-y-1">
-                <a href="/admin/quizzes" className="text-sm text-blue-600 hover:underline block">
+                <a href="/admin/quizzes" className="text-xs sm:text-sm text-blue-600 hover:underline block">
                   {canAccessAllQuizzes ? 'Manage All Quizzes' : 'View My Quizzes'}
                 </a>
                 {canManageUsers && (
-                  <a href="/admin/users" className="text-sm text-green-600 hover:underline block">
+                  <a href="/admin/users" className="text-xs sm:text-sm text-green-600 hover:underline block">
                     Manage Users
                   </a>
                 )}
                 {isSuperadmin && (
-                  <a href="/admin/assignments" className="text-sm text-purple-600 hover:underline block">
+                  <a href="/admin/assignments" className="text-xs sm:text-sm text-purple-600 hover:underline block">
                     Quiz Assignments
                   </a>
                 )}
@@ -257,38 +252,43 @@ export default function AdminDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
         <div className="bg-white rounded-lg shadow-md">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">📋 Recent Activity</h2>
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+            <h2 className="text-base sm:text-xl font-semibold text-gray-900">📋 Recent Activity</h2>
           </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {recentActivity.slice(0, 5).map((activity) => (
-                <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+          <div className="p-4 sm:p-6">
+            <div className="space-y-2 sm:space-y-4">
+              {recentActivity.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">Tidak ada aktivitas terkini</p>
+                  <p className="text-xs mt-1">Data akan muncul di sini</p>
+                </div>
+              ) : recentActivity.slice(0, 5).map((activity) => (
+                <div key={activity.id} className="flex items-start sm:items-center space-x-2 sm:space-x-3 p-2 sm:p-3 bg-gray-50 rounded-lg">
                   <div className="flex-shrink-0">
                     {activity.type === 'quiz_completed' && (
-                      <span className="text-green-500 text-xl">✅</span>
+                      <span className="text-green-500 text-base sm:text-xl">✅</span>
                     )}
                     {activity.type === 'new_participant' && (
-                      <span className="text-blue-500 text-xl">👤</span>
+                      <span className="text-blue-500 text-base sm:text-xl">👤</span>
                     )}
                     {activity.type === 'quiz_created' && (
-                      <span className="text-purple-500 text-xl">➕</span>
+                      <span className="text-purple-500 text-base sm:text-xl">➕</span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                    <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                       {activity.user}
                     </p>
-                    <p className="text-sm text-gray-500 truncate">
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">
                       {activity.type === 'quiz_completed' && `Completed "${activity.quiz}"`}
                       {activity.type === 'new_participant' && `Joined "${activity.quiz}"`}
                       {activity.type === 'quiz_created' && `Created "${activity.quiz}"`}
                       {activity.score && ` - Score: ${activity.score}%`}
                     </p>
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-[10px] sm:text-xs text-gray-400 flex-shrink-0">
                     {activity.time}
                   </div>
                 </div>
@@ -299,28 +299,27 @@ export default function AdminDashboard() {
 
         {/* Top Performing Quizzes */}
         <div className="bg-white rounded-lg shadow-md">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">🏆 Top Performing Quizzes</h2>
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+            <h2 className="text-base sm:text-xl font-semibold text-gray-900">🏆 Top Performing Quizzes</h2>
           </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {[
-                { name: "Logic Test - Pelayanan Anak", participants: 15, avgScore: 92.3, color: "green" },
-                { name: "Leadership Assessment", participants: 12, avgScore: 87.8, color: "blue" },
-                { name: "Ministry Evaluation", participants: 10, avgScore: 84.5, color: "purple" },
-                { name: "Youth Assessment", participants: 8, avgScore: 81.2, color: "orange" },
-                { name: "Worship Team Test", participants: 6, avgScore: 78.9, color: "pink" }
-              ].map((quiz, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium text-gray-900">{quiz.name}</h4>
-                    <p className="text-xs text-gray-500">{quiz.participants} participants</p>
+          <div className="p-4 sm:p-6">
+            <div className="space-y-2 sm:space-y-4">
+              {[].length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">Tidak ada data quiz</p>
+                  <p className="text-xs mt-1">Data akan muncul setelah ada peserta</p>
+                </div>
+              ) : [].map((quiz: any, index: number) => (
+                <div key={index} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1 min-w-0 mr-3">
+                    <h4 className="text-xs sm:text-sm font-medium text-gray-900 truncate">{quiz.name}</h4>
+                    <p className="text-[10px] sm:text-xs text-gray-500">{quiz.participants} participants</p>
                   </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-bold text-${quiz.color}-600`}>
+                  <div className="text-right flex-shrink-0">
+                    <p className={`text-sm sm:text-base font-bold text-${quiz.color}-600`}>
                       {quiz.avgScore}%
                     </p>
-                    <p className="text-xs text-gray-500">avg score</p>
+                    <p className="text-[10px] sm:text-xs text-gray-500">avg score</p>
                   </div>
                 </div>
               ))}

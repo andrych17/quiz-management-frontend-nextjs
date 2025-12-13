@@ -18,9 +18,7 @@ import {
   StartQuizSessionDto,
   UpdateSessionTimeDto
 } from '@/types/api';
-
-// Base API URL from environment
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+import { API_BASE_URL } from './constants/api';
 
 /**
  * Base API client with standardized response handling
@@ -30,7 +28,7 @@ export class BaseApiClient {
     endpoint: string, 
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    const url = `${API_BASE_URL}/api${endpoint}`;
+    const url = `${API_BASE_URL}${endpoint}`;
     
     const defaultHeaders: Record<string, string> = {
       'Content-Type': 'application/json',

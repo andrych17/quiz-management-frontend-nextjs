@@ -4,6 +4,7 @@
  */
 
 import { TableFilters, SortConfig, PaginationConfig } from "../components/ui/table/TableFilterBar";
+import { API_BASE_URL } from './constants/api';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -215,7 +216,7 @@ export class EnhancedApiClient {
   private baseUrl: string;
   private token?: string;
 
-  constructor(baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api') {
+  constructor(baseUrl = API_BASE_URL) {
     this.baseUrl = baseUrl;
   }
 

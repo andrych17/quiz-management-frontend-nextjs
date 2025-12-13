@@ -1,53 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse } from '@/types/api';
 
-// Mock data for quiz attempts/results
-const mockAttempts = [
-  {
-    id: 1,
-    participantName: 'John Doe',
-    email: 'john.doe@example.com',
-    nij: '12345',
-    quizId: 1,
-    quizTitle: 'Test Masuk Service Management Batch 1',
-    serviceKey: 'service-management',
-    serviceName: 'Service Management',
-    locationKey: 'jakarta',
-    locationName: 'Jakarta',
-    score: 85,
-    grade: 'A',
-    passed: true,
-    startedAt: '2025-12-03T10:00:00Z',
-    completedAt: '2025-12-03T10:45:00Z',
-    submittedAt: '2025-12-03T10:45:00Z',
-    totalAnswers: 10,
-    correctAnswers: 8,
-    createdAt: '2025-12-03T10:00:00Z',
-    updatedAt: '2025-12-03T10:45:00Z',
-  },
-  {
-    id: 2,
-    participantName: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    nij: '67890',
-    quizId: 1,
-    quizTitle: 'Test Masuk Service Management Batch 1',
-    serviceKey: 'service-management',
-    serviceName: 'Service Management',
-    locationKey: 'surabaya',
-    locationName: 'Surabaya',
-    score: 65,
-    grade: 'C',
-    passed: false,
-    startedAt: '2025-12-03T11:00:00Z',
-    completedAt: '2025-12-03T11:30:00Z',
-    submittedAt: '2025-12-03T11:30:00Z',
-    totalAnswers: 10,
-    correctAnswers: 6,
-    createdAt: '2025-12-03T11:00:00Z',
-    updatedAt: '2025-12-03T11:30:00Z',
-  }
-];
+// TODO: Connect to real backend API
+const mockAttempts: any[] = [];
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,6 +15,7 @@ export async function GET(request: NextRequest) {
     const quizId = searchParams.get('quizId') ? parseInt(searchParams.get('quizId')!) : null;
     
     console.log('📊 Getting attempts with params:', { page, limit, search, quizId });
+    console.log('⚠️ Using empty mockdata - connect to real backend');
     
     // Filter attempts
     let filteredAttempts = [...mockAttempts];

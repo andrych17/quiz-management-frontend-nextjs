@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { publicSubmitSchema, participantInfoSchema } from "@/../lib/schemas";
-import { db } from "@/lib/mockdb";
 import { Quiz } from "@/types";
 import { useQuizSession, useQuizTimer, useAutoSave, useSessionPersistence } from "@/hooks/useQuizSession";
 import QuizTimer, { TimeWarning } from "@/components/ui/QuizTimer";
@@ -195,12 +194,14 @@ export default function PublicQuizForm({ quiz }: PublicQuizFormProps) {
         await session.completeSession();
       }
 
-      // Submit to backend
-      const result = db.submitAttempt(quiz.linkToken, { 
-        name: participantInfo.name, 
-        nij: participantInfo.nij, 
-        answers 
-      });
+      // TODO: Submit to backend API
+      console.warn('⚠️ Mock data removed - connect to real backend API');
+      
+      // Simulate success for now
+      const result = {
+        success: false,
+        message: 'Backend API not connected. Please configure real backend endpoint.'
+      };
 
       setSubmitted(true);
       setMessage(autoSubmit ? 
