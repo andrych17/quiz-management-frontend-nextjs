@@ -5,15 +5,8 @@ const nextConfig: NextConfig = {
   // Set the output file tracing root to suppress warnings
   outputFileTracingRoot: path.join(__dirname),
   
-  // Webpack configuration to help with module resolution
-  webpack: (config, { isServer }) => {
-    // Ensure proper module resolution
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-    };
-    
-    return config;
-  },
+  // Use Turbopack by default in Next.js 16
+  turbopack: {},
   
   // Experimental features for better stability
   experimental: {
