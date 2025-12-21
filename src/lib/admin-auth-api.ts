@@ -44,16 +44,10 @@ export class AdminAuthAPI {
    * Admin login
    */
   static async login(email: string, password: string): Promise<any> {
-    console.log('AdminAuthAPI.login called with:', { email });
-    console.log('API URL:', `${API_BASE_URL}/api/auth/login`);
-    
     const response = await AdminAuthAPI.request<any>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    
-    console.log('Backend API login response:', JSON.stringify(response, null, 2));
-    console.log('Response type:', typeof response);
     return response;
   }
 

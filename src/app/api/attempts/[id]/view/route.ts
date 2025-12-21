@@ -123,8 +123,6 @@ export async function GET(
     const { id } = await params;
     const attemptId = parseInt(id);
     
-    console.log('📊 Getting detailed attempt:', attemptId);
-    
     if (!attemptId || isNaN(attemptId)) {
       const response: ApiResponse = {
         success: false,
@@ -136,7 +134,6 @@ export async function GET(
     }
     
     // TODO: Connect to real backend API
-    console.log('⚠️ Mock data removed - connect to real backend');
     const response: ApiResponse = {
       success: false,
       message: 'Backend API not configured. Please connect to real backend endpoint.',

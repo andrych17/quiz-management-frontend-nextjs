@@ -7,11 +7,6 @@ const nextConfig: NextConfig = {
   
   // Use Turbopack by default in Next.js 16
   turbopack: {},
-  
-  // Experimental features for better stability
-  experimental: {
-    forceSwcTransforms: true,
-  },
 };
 
 export default nextConfig;

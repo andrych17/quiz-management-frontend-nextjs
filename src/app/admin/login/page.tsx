@@ -19,21 +19,14 @@ function LoginForm() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    console.log('Login page auth check:', { isAuthenticated, authLoading });
-    
     // Check for token directly from storage as backup
     const hasTokenInStorage = typeof window !== 'undefined' && (
       localStorage.getItem('admin_token') || 
       sessionStorage.getItem('admin_token')
     );
-    
-    console.log('Token in storage:', !!hasTokenInStorage);
-    
     if (isAuthenticated && !authLoading) {
-      console.log('Redirecting authenticated user to:', redirectTo);
       router.push(redirectTo);
     } else if (hasTokenInStorage && !authLoading) {
-      console.log('Token found in storage but not authenticated, redirecting anyway');
       router.push(redirectTo);
     }
   }, [isAuthenticated, authLoading, router, redirectTo]);

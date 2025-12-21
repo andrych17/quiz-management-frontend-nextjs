@@ -131,12 +131,9 @@ export default function QuizDetailPage({ params }: PageProps) {
     if (!quizId) return;
     
     const loadData = async () => {
-      console.log('🚀 Main useEffect triggered - isCreateMode:', isCreateMode, 'quizId:', quizId);
       if (!isCreateMode) {
-        console.log('📝 Loading existing quiz data...');
         await loadQuizData();
       } else {
-        console.log('🆕 Create mode - loading options only...');
         await loadOptions();
       }
     };
@@ -145,10 +142,8 @@ export default function QuizDetailPage({ params }: PageProps) {
   }, [quizId, isCreateMode]);
 
   const loadOptions = async () => {
-    console.log('🔄 Starting loadOptions for create mode...');
     try {
       setLoading(true);
-      console.log('📡 Loading location and service options...');
 
       const [locationRes, serviceRes] = await Promise.all([
         API.config.getConfigsByGroup('location'),
@@ -180,16 +175,13 @@ export default function QuizDetailPage({ params }: PageProps) {
         stack: err.stack
       });
     } finally {
-      console.log('✅ loadOptions completed, setting loading to false');
       setLoading(false);
     }
   };
 
   const loadQuizData = async () => {
-    console.log('🔄 Starting loadQuizData for quizId:', quizId);
     try {
       setLoading(true);
-      console.log('📡 Making API calls for quiz, locations, and services...');
 
       const [quizRes, locationRes, serviceRes] = await Promise.all([
         API.quizzes.getQuiz(Number(quizId)),
@@ -222,11 +214,6 @@ export default function QuizDetailPage({ params }: PageProps) {
 
       if (quizRes.success && quizRes.data) {
         const quizData = quizRes.data;
-        
-        console.log('=== LOAD QUIZ DATA ===');
-        console.log('Raw quiz data:', quizData);
-        console.log('Questions from backend:', quizData.questions);
-        console.log('=====================');
         
         setFormData({
           title: quizData.title || '',
@@ -279,9 +266,6 @@ export default function QuizDetailPage({ params }: PageProps) {
           };
         });
         
-        console.log('Transformed questions:', transformedQuestions);
-        console.log('=====================');
-        
         setQuestions(transformedQuestions);
         
         // Load scoring map - convert from new backend format
@@ -304,7 +288,6 @@ export default function QuizDetailPage({ params }: PageProps) {
       setDialogMessage(err?.message || 'Failed to load quiz data');
       setShowDialog(true);
     } finally {
-      console.log('✅ loadQuizData completed, setting loading to false');
       setLoading(false);
     }
   };
@@ -463,14 +446,6 @@ export default function QuizDetailPage({ params }: PageProps) {
             }
           }
             
-          // Log for debugging
-          console.log(`Question ${index + 1} correctAnswer:`, {
-            original: q.correctAnswer,
-            type: typeof q.correctAnswer,
-            isArray: Array.isArray(q.correctAnswer),
-            final: questionData.correctAnswer
-          });
-          
           return questionData;
         });
       }

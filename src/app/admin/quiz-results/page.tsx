@@ -62,21 +62,14 @@ export default function QuizResultsPage() {
   }, [filterValues, sortConfig, page]);
 
   const loadConfigOptions = useCallback(async () => {
-    console.log('🏢 Loading config options...');
     try {
       // Load location options from backend API
-      console.log('🏢 Fetching location configs...');
       const locationRes = await API.config.getConfigsByGroup('location');
-      console.log('🏢 Location response:', locationRes);
       const locationData = locationRes?.data || [];
-      console.log('🏢 Location data:', locationData);
-      
       const locationOpts = Array.isArray(locationData) ? locationData.map((config: { key: string, value: string }) => ({
         key: config.key,
         name: config.value
       })) : [];
-      console.log('🏢 Processed location options:', locationOpts);
-      
       // Filter out any potential duplicates and ensure unique keys
       const uniqueLocationOpts = locationOpts.filter(opt => opt.key !== 'all_locations');
       setLocationOptions([
@@ -85,18 +78,12 @@ export default function QuizResultsPage() {
       ]);
 
       // Load service options from backend API
-      console.log('🏢 Fetching service configs...');
       const serviceRes = await API.config.getConfigsByGroup('service');
-      console.log('🏢 Service response:', serviceRes);
       const serviceData = serviceRes?.data || [];
-      console.log('🏢 Service data:', serviceData);
-      
       const serviceOpts = Array.isArray(serviceData) ? serviceData.map((config: { key: string, value: string }) => ({
         key: config.key,
         name: config.value
       })) : [];
-      console.log('🏢 Processed service options:', serviceOpts);
-      
       // Filter out any potential duplicates and ensure unique keys
       const uniqueServiceOpts = serviceOpts.filter(opt => opt.key !== 'all_services');
       setServiceOptions([

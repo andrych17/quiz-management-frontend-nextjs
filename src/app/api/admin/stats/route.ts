@@ -13,7 +13,6 @@ export async function GET() {
 
     if (!response.ok) {
       // Backend endpoint not available
-      console.log('Backend stats endpoint not available');
       const emptyStats = {
         totalUsers: 0,
         totalAttempts: 0,

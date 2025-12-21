@@ -61,7 +61,6 @@ export class BaseApiClient {
       
       // Only log successful responses to reduce console noise
       if (response.ok && responseData.success) {
-        console.log(`API Response [${response.status}]:`, responseData);
       }
 
       // Only throw for actual HTTP errors (4xx, 5xx), not for success:false with 200
@@ -194,15 +193,11 @@ export class QuizzesAPI extends BaseApiClient {
     limit?: number;
   }): Promise<ApiResponse<Quiz[]>> {
     let url = '/quizzes';
-    
-    console.log('🔧 QuizzesAPI.getQuizzes called with params:', params);
-    
     if (params) {
       const queryParams = new URLSearchParams();
       
       // Add filter parameters with correct mapping
       if (params.filters) {
-        console.log('🔧 Processing filters:', params.filters);
         Object.entries(params.filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null && value !== '') {
             // Map frontend filter keys to backend parameter names
@@ -220,7 +215,6 @@ export class QuizzesAPI extends BaseApiClient {
             }
             
             const filterValue = String(value);
-            console.log(`🔧 Adding filter parameter: ${backendKey}=${filterValue} (mapped from ${key})`);
             queryParams.append(backendKey, filterValue);
           }
         });
@@ -228,18 +222,15 @@ export class QuizzesAPI extends BaseApiClient {
       
       // Add sort parameters
       if (params.sort) {
-        console.log('🔧 Adding sort:', params.sort);
         queryParams.append('sort', params.sort.field);
         queryParams.append('order', params.sort.direction);
       }
       
       // Add pagination parameters
       if (params.page) {
-        console.log('🔧 Adding page:', params.page);
         queryParams.append('page', String(params.page));
       }
       if (params.limit) {
-        console.log('🔧 Adding limit:', params.limit);
         queryParams.append('limit', String(params.limit));
       }
       
@@ -247,9 +238,6 @@ export class QuizzesAPI extends BaseApiClient {
         url += `?${queryParams.toString()}`;
       }
     }
-    
-    console.log('🔧 Final API URL:', url);
-    
     return this.request<Quiz[]>(url);
   }
 
@@ -603,6 +591,10 @@ export class ConfigAPI extends BaseApiClient {
 
   static async getLocationConfigs(): Promise<ApiResponse<Config[]>> {
     return this.request<Config[]>('/config/locations');
+  }
+
+  static async getServiceConfigs(): Promise<ApiResponse<Config[]>> {
+    return this.request<Config[]>('/config/services');
   }
 
   static async createConfig(configData: Omit<Config, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<ApiResponse<Config>> {

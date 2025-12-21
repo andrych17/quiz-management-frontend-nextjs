@@ -13,10 +13,6 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const quizId = searchParams.get('quizId') ? parseInt(searchParams.get('quizId')!) : null;
-    
-    console.log('📊 Getting attempts with params:', { page, limit, search, quizId });
-    console.log('⚠️ Using empty mockdata - connect to real backend');
-    
     // Filter attempts
     let filteredAttempts = [...mockAttempts];
     

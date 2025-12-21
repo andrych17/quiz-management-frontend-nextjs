@@ -24,25 +24,18 @@ export default function QuizzesPage() {
 
   // Add logging for state changes
   useEffect(() => {
-    console.log('📊 filterValues changed:', filterValues);
   }, [filterValues]);
 
   useEffect(() => {
-    console.log('📊 quizzes state changed, count:', quizzes.length);
   }, [quizzes]);
 
   useEffect(() => {
-    console.log('📊 loading state changed:', loading);
   }, [loading]);
 
   useEffect(() => {
-    console.log('📊 locationOptions state changed:', locationOptions);
-    console.log('📊 locationOptions length:', locationOptions.length);
   }, [locationOptions]);
 
   useEffect(() => {
-    console.log('📊 serviceOptions state changed:', serviceOptions);
-    console.log('📊 serviceOptions length:', serviceOptions.length);
   }, [serviceOptions]);
 
   const router = useRouter();
@@ -51,10 +44,6 @@ export default function QuizzesPage() {
 
 
   const loadQuizzes = useCallback(async (filters: TableFilters = {}, sort?: SortConfig, currentPage: number = 1) => {
-    console.log('🔄 loadQuizzes called with:', { filters, sort, currentPage });
-    console.log('🔄 Filters object keys:', Object.keys(filters));
-    console.log('🔄 Filter values:', filters);
-    
     setLoading(true);
     setError(null);
     try {
@@ -68,16 +57,7 @@ export default function QuizzesPage() {
         page: currentPage,
         limit: 10
       };
-      
-      console.log('📡 API call params:', JSON.stringify(apiParams, null, 2));
-      
-      console.log('📡 About to call API.quizzes.getQuizzes with params:', apiParams);
       const res = await API.quizzes.getQuizzes(apiParams);
-      console.log('📡 API call completed');
-      
-      console.log('📥 Raw API response:', res);
-      console.log('📥 Raw API response data:', res.data);
-      
       const response = res.data as { 
         items?: ApiQuiz[], 
         data?: ApiQuiz[], 
@@ -92,12 +72,6 @@ export default function QuizzesPage() {
       };
       const quizzesData = response?.items || response?.data || (Array.isArray(res.data) ? res.data : []);
       const totalCount = response?.pagination?.totalItems || response?.total || response?.count || (Array.isArray(quizzesData) ? quizzesData.length : 0);
-      
-      console.log('📥 Processed quiz data:', quizzesData);
-      console.log('📥 API response - quiz count:', quizzesData.length);
-      console.log('📥 API response - total:', totalCount);
-      console.log('📥 First quiz sample:', quizzesData[0]);
-      
       setQuizzes(Array.isArray(quizzesData) ? quizzesData : []);
       setTotal(totalCount);
     } catch (err: unknown) {
@@ -115,41 +89,25 @@ export default function QuizzesPage() {
   }, []);
 
   const loadConfigOptions = useCallback(async () => {
-    console.log('🏢 Loading config options...');
     try {
-      // Load location options from backend API
-      console.log('🏢 Fetching location configs...');
-      const locationRes = await API.config.getConfigsByGroup('location');
-      console.log('🏢 Location response:', locationRes);
-      console.log('🏢 Location response type:', typeof locationRes);
-      console.log('🏢 Location response data type:', typeof locationRes?.data);
+      // Load location options from backend API using correct endpoint
+      const locationRes = await API.config.getLocationConfigs();
       const locationData = locationRes?.data || [];
-      console.log('🏢 Location data:', locationData);
-      console.log('🏢 Location data length:', locationData?.length);
-      console.log('🏢 Location data sample:', locationData[0]);
-      
       const locationOpts = Array.isArray(locationData) ? locationData.map((config: { key: string, value: string }, index: number) => {
-        console.log(`🏢 Processing location ${index}:`, config);
         return {
           value: config.key,
           label: config.value
         };
       }) : [];
-      console.log('🏢 Processed location options:', locationOpts);
-      console.log('🏢 Setting locationOptions state with:', locationOpts);
       setLocationOptions(locationOpts);
 
-      // Load service options from backend API
-      console.log('🏢 Fetching service configs...');
-      const serviceRes = await API.config.getConfigsByGroup('service');
-      console.log('🏢 Service response:', serviceRes);
+      // Load service options from backend API using correct endpoint
+      const serviceRes = await API.config.getServiceConfigs();
       const serviceData = serviceRes?.data || [];
-      console.log('🏢 Service data:', serviceData);
       const serviceOpts = Array.isArray(serviceData) ? serviceData.map((config: { key: string, value: string }) => ({
         value: config.key,
         label: config.value
       })) : [];
-      console.log('🏢 Processed service options:', serviceOpts);
       setServiceOptions(serviceOpts);
     } catch (err) {
       console.error('Failed to load config options:', err);
@@ -160,8 +118,6 @@ export default function QuizzesPage() {
   }, []);
 
   useEffect(() => {
-    console.log('🚀 QuizzesPage useEffect triggered');
-    console.log('🚀 Current auth state - canAccessAllQuizzes:', canAccessAllQuizzes, 'isAdmin:', isAdmin);
     // Load config options first
     loadConfigOptions();
     // Load quizzes
@@ -173,79 +129,26 @@ export default function QuizzesPage() {
       key: "title",
       label: "Quiz Title",
       sortable: true,
-      render: (value: unknown, row: ApiQuiz) => (
-        <div>
-          <div className="font-medium text-gray-900">{row.title}</div>
-          <div className="text-sm text-gray-500">
-            {Array.isArray(row.questions) ? row.questions.length : 0} questions
-          </div>
-        </div>
-      )
-    },
-    {
-      key: "isPublished",
-      label: "Published",
-      sortable: true,
       render: (value: unknown, row: ApiQuiz) => {
         const isPublished = row.isPublished;
-        return (
-          <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-md ${
-            isPublished 
-              ? 'bg-green-50 text-green-800 border border-green-200' 
-              : 'bg-yellow-50 text-yellow-800 border border-yellow-200'
-          }`}>
-            <span className={`w-2 h-2 mr-1.5 rounded-full ${
-              isPublished ? 'bg-green-400' : 'bg-yellow-400'
-            }`}></span>
-            {isPublished ? 'Published' : 'Draft'}
-          </span>
-        );
-      }
-    },
-    {
-      key: "isActive",
-      label: "Active",
-      sortable: true,
-      render: (value: unknown, row: ApiQuiz) => {
         const isActive = row.isActive === true;
-        return (
-          <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-md ${
-            isActive 
-              ? 'bg-green-50 text-green-800 border border-green-200' 
-              : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
-            <span className={`w-2 h-2 mr-1.5 rounded-full ${
-              isActive ? 'bg-green-400' : 'bg-red-400'
-            }`}></span>
-            {isActive ? 'Active' : 'Inactive'}
-          </span>
-        );
-      }
-    },
-    {
-      key: "questions",
-      label: "Questions",
-      render: (value: unknown, row: ApiQuiz) => {
         const count = Array.isArray(row.questions) ? row.questions.length : 0;
         return (
-          <div className="text-center">
-            <div className="text-sm font-medium text-gray-900">{count}</div>
-            <div className="text-xs text-gray-500">questions</div>
-          </div>
-        );
-      }
-    },
-    {
-      key: "quizType",
-      label: "Type",
-      sortable: true,
-      render: (value: unknown, row: ApiQuiz) => {
-        const type = row.quizType || 'Standard';
-        return (
-          <div className="text-center">
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-              {type}
-            </span>
+          <div className="min-w-[200px]">
+            <div className="font-medium text-gray-900">{row.title}</div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-gray-500">{count} soal</span>
+              <span className={`inline-flex items-center px-1.5 py-0.5 text-xs rounded ${
+                isPublished ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {isPublished ? 'Published' : 'Draft'}
+              </span>
+              <span className={`inline-flex items-center px-1.5 py-0.5 text-xs rounded ${
+                isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              }`}>
+                {isActive ? 'Aktif' : 'Nonaktif'}
+              </span>
+            </div>
           </div>
         );
       }
@@ -254,14 +157,9 @@ export default function QuizzesPage() {
       key: "service",
       label: "Service",
       render: (value: unknown, row: ApiQuiz) => {
-        // Use service object from quiz data, fallback to serviceKey, then serviceType
         const serviceName = row.service?.value || row.serviceKey || row.serviceType || 'Not Assigned';
-        console.log('🔧 Rendering service for quiz:', row.id, 'service:', row.service, 'serviceKey:', row.serviceKey, 'serviceType:', row.serviceType);
         return (
-          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-blue-50 text-blue-800">
-            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6" />
-            </svg>
+          <span className="text-xs text-gray-700">
             {serviceName}
           </span>
         );
@@ -271,15 +169,9 @@ export default function QuizzesPage() {
       key: "location",
       label: "Location",
       render: (value: unknown, row: ApiQuiz) => {
-        // Use location object from quiz data
         const locationName = row.location?.value || row.locationKey || 'Global';
-        console.log('🗺️ Rendering location for quiz:', row.id, 'location:', row.location, 'locationKey:', row.locationKey);
         return (
-          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-green-50 text-green-800">
-            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+          <span className="text-xs text-gray-700">
             {locationName}
           </span>
         );
@@ -287,16 +179,16 @@ export default function QuizzesPage() {
     },
     {
       key: "createdAt",
-      label: "Created",
+      label: "Dibuat",
       sortable: true,
       render: (value: unknown, row: ApiQuiz) => {
         const date = new Date(row.createdAt || '');
         return (
-          <div className="text-sm text-gray-600">
+          <div className="text-xs text-gray-600">
             {date.toLocaleDateString('id-ID', {
-              year: 'numeric',
+              day: '2-digit',
               month: 'short', 
-              day: 'numeric'
+              year: 'numeric'
             })}
           </div>
         );
@@ -348,11 +240,6 @@ export default function QuizzesPage() {
 
   // Filter options untuk tabel - using dynamic config data
   const filters: FilterOption[] = useMemo(() => {
-    console.log('🔍 Creating filter options with locationOptions:', locationOptions);
-    console.log('🔍 locationOptions details:', locationOptions.map(opt => `${opt.value}: ${opt.label}`));
-    console.log('🔍 Creating filter options with serviceOptions:', serviceOptions);
-    console.log('🔍 serviceOptions details:', serviceOptions.map(opt => `${opt.value}: ${opt.label}`));
-    
     const assignedLocationFilter = {
       key: 'assignedLocation',
       label: 'Assigned Location',
@@ -368,10 +255,6 @@ export default function QuizzesPage() {
       placeholder: 'Choose Service',
       options: serviceOptions
     };
-    
-    console.log('🔍 assignedLocationFilter:', assignedLocationFilter);
-    console.log('🔍 assignedServiceFilter:', assignedServiceFilter);
-    
     const filterOptions = [
       {
         key: 'title',
@@ -398,29 +281,18 @@ export default function QuizzesPage() {
       assignedLocationFilter,
       assignedServiceFilter
     ] as FilterOption[];
-    
-    console.log('🔍 Final filter options created:', filterOptions);
-    console.log('🔍 Location filter in final options:', filterOptions.find(f => f.key === 'assignedLocation'));
     return filterOptions;
   }, [locationOptions, serviceOptions]);
 
   const handleFilterChange = useCallback((filters: TableFilters) => {
-    console.log('🔄 handleFilterChange called');
-    console.log('🔄 New filters received:', filters);
-    console.log('🔄 Previous filterValues:', filterValues);
-    console.log('🔄 Current sortConfig:', sortConfig);
-    
     setFilterValues(filters);
     setPage(1); // Reset to first page when filtering
-    
-    console.log('🔄 About to call loadQuizzes with filters:', filters);
     // Make API call with new filters
     loadQuizzes(filters, sortConfig, 1);
   }, [loadQuizzes, sortConfig, filterValues]);
 
   const handleSort = useCallback((field: string, direction: 'ASC' | 'DESC') => {
     setSortConfig({ field, direction });
-    console.log('Sort:', field, direction);
   }, []);
 
   const handleLimitChange = useCallback((newLimit: number) => {
@@ -497,7 +369,7 @@ export default function QuizzesPage() {
           onLimitChange: handleLimitChange
         }}
         showExport
-        onExport={() => console.log('Export quizzes')}
+        onExport={() => {}}
       />
     </BasePageLayout>
   );

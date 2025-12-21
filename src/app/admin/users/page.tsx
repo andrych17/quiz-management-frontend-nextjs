@@ -27,10 +27,6 @@ export default function UsersPage() {
   const memoizedFilterValues = useMemo(() => filterValues, [filterValues]);
 
   const loadUsers = useCallback(async () => {
-    console.log('👥 loadUsers called');
-    console.log('👥 Current filters:', memoizedFilterValues);
-    console.log('👥 Page:', page, 'Limit:', limit);
-    
     setLoading(true);
     setError(null);
     try {
@@ -39,23 +35,11 @@ export default function UsersPage() {
         limit,
         ...memoizedFilterValues // Apply filters
       };
-      console.log('👥 API call params:', params);
-      
       const res = await API.users.getUsers(params);
-      console.log('👥 Users API response:', res);
-      console.log('👥 Users API response.data:', res.data);
-      
       // Handle paginated response
       const response = res.data as { items?: ApiUser[], data?: ApiUser[], total?: number, count?: number };
       const usersData = response?.items || response?.data || (Array.isArray(res.data) ? res.data : []);
       const totalCount = response?.total || response?.count || (Array.isArray(usersData) ? usersData.length : 0);
-      
-      console.log('👥 Processed users data:', usersData);
-      console.log('👥 Users count:', usersData.length);
-      console.log('👥 Total count:', totalCount);
-      console.log('👥 First user sample:', usersData[0]);
-      console.log('👥 DETAILED first user:', JSON.stringify(usersData[0], null, 2));
-      
       setUsers(Array.isArray(usersData) ? usersData : []);
       setTotal(totalCount);
     } catch (err: unknown) {
@@ -73,28 +57,23 @@ export default function UsersPage() {
   }, [page, limit, memoizedFilterValues]);
 
   const loadConfigOptions = useCallback(async () => {
-    console.log('🏢 Loading config options for users page...');
     try {
       // Load location options from backend API
       const locationRes = await API.config.getConfigsByGroup('location');
-      console.log('🏢 Location response:', locationRes);
       const locationData = locationRes?.data || [];
       const locationOpts = Array.isArray(locationData) ? locationData.map((config: { key: string, value: string }) => ({
         value: config.key,
         label: config.value
       })) : [];
-      console.log('🏢 Location options:', locationOpts);
       setLocationOptions(locationOpts);
 
       // Load service options from backend API
       const serviceRes = await API.config.getConfigsByGroup('service');
-      console.log('🏢 Service response:', serviceRes);
       const serviceData = serviceRes?.data || [];
       const serviceOpts = Array.isArray(serviceData) ? serviceData.map((config: { key: string, value: string }) => ({
         value: config.key,
         label: config.value
       })) : [];
-      console.log('🏢 Service options:', serviceOpts);
       setServiceOptions(serviceOpts);
     } catch (err) {
       console.error('Failed to load config options:', err);
@@ -119,10 +98,6 @@ export default function UsersPage() {
 
   // Filter options untuk tabel - using dynamic config data
   const filters: FilterOption[] = useMemo(() => {
-    console.log('🔍 Creating user filter options');
-    console.log('🔍 locationOptions:', locationOptions);
-    console.log('🔍 serviceOptions:', serviceOptions);
-    
     const filterOptions: FilterOption[] = [
       {
         key: 'name',
@@ -172,8 +147,6 @@ export default function UsersPage() {
         ]
       }
     ];
-    
-    console.log('🔍 Created filter options:', filterOptions);
     return filterOptions;
   }, [locationOptions, serviceOptions]);
 
@@ -213,7 +186,6 @@ export default function UsersPage() {
       render: (value: unknown, row: ApiUser) => {
         // Use service object from user data, fallback to serviceKey
         const serviceName = row.service?.value || row.serviceKey || 'Not Assigned';
-        console.log('🔧 Rendering service for user:', row.id, 'service obj:', row.service, 'serviceKey:', row.serviceKey, 'final name:', serviceName);
         return (
           <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-blue-50 text-blue-800">
             <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,7 +202,6 @@ export default function UsersPage() {
       render: (value: unknown, row: ApiUser) => {
         // Use location object from user data, fallback to locationKey
         const locationName = row.location?.value || row.locationKey || 'Not Assigned';
-        console.log('🗺️ Rendering location for user:', row.id, 'location obj:', row.location, 'locationKey:', row.locationKey, 'final name:', locationName);
         return (
           <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-green-50 text-green-800">
             <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,7 +217,6 @@ export default function UsersPage() {
       key: "isActive",
       label: "Status",
       render: (value: unknown, row: ApiUser) => {
-        console.log('👤 User status debug:', { 
           userId: row.id, 
           value, 
           type: typeof value, 
@@ -258,7 +228,6 @@ export default function UsersPage() {
                          (row.isActive === true) ||
                          (String(row.isActive) === 'true') ||
                          (Number(row.isActive) === 1);
-        console.log('👤 isActive result:', isActive);
         return (
           <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg ${
             isActive 
@@ -355,16 +324,12 @@ export default function UsersPage() {
   };
 
   const handleFilterChange = useCallback((filters: TableFilters) => {
-    console.log('👥 handleFilterChange called');
-    console.log('👥 New filters:', filters);
-    console.log('👥 Previous filterValues:', filterValues);
     setFilterValues(filters);
     setPage(1); // Reset to first page when filtering
   }, [filterValues]);
 
   const handleSort = useCallback((field: string, direction: 'ASC' | 'DESC') => {
     setSortConfig({ field, direction });
-    console.log('Sort:', field, direction);
   }, []);
 
   const handleLimitChange = useCallback((newLimit: number) => {
@@ -431,7 +396,7 @@ export default function UsersPage() {
           onLimitChange: handleLimitChange
         }}
         showExport
-        onExport={() => console.log('Export data')}
+        onExport={() => {}}
       />
     </BasePageLayout>
   );

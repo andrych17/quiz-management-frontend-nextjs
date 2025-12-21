@@ -9,10 +9,6 @@ export async function POST(
     const { token } = await params;
     const body = await request.json();
     
-    console.log('🔍 Public quiz submit API - Token:', token);
-    console.log('📝 Submit payload:', body);
-    console.log('⚠️ Mock data removed - connect to real backend');
-    
     if (!token) {
       const response: ApiResponse = {
         success: false,
@@ -36,7 +32,6 @@ export async function POST(
 
     // TODO: Connect to real backend API
     // For now, return error that backend is not connected
-    console.log('❌ Backend API not configured - mockdata removed');
     const response: ApiResponse = {
       success: false,
       message: 'Backend API not configured. Please connect to real backend endpoint to submit quiz.',

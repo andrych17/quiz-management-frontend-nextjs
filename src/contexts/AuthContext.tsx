@@ -154,7 +154,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               dispatch({ type: 'LOGOUT' });
             }
           } else {
-            console.log('No saved token found, staying logged out');
             dispatch({ type: 'LOGOUT' });
           }
         }
@@ -260,7 +259,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear cookies
       document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       document.cookie = 'admin_refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      console.log('Logout: All storage cleared');
     }
   }, [state.isAuthenticated, state.isLoading]);
 
@@ -312,8 +310,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setTimeout(() => {
         const cookies = document.cookie.split(';').map(c => c.trim());
         const adminCookie = cookies.find(c => c.startsWith('admin_token='));
-        console.log('Post-login cookie check:', adminCookie ? 'FOUND: ' + adminCookie.substring(0, 50) + '...' : 'NOT FOUND');
-        console.log('All cookies:', cookies);
       }, 500);
       
     } catch (error) {

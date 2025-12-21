@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -24,10 +24,6 @@ export default function ConfigPage() {
 
   // Load configurations from API
   const loadConfigs = useCallback(async () => {
-    console.log('⚙️ loadConfigs called');
-    console.log('⚙️ Current filters:', memoizedFilterValues);
-    console.log('⚙️ Page:', page, 'Limit:', limit, 'Total:', total);
-    
     setLoading(true);
     setError(null);
     try {
@@ -36,12 +32,7 @@ export default function ConfigPage() {
         limit,
         ...memoizedFilterValues
       };
-      console.log('⚙️ API call params:', params);
-      
       const response = await ConfigAPI.getConfigs(params);
-      console.log('⚙️ Config API response:', response);
-      console.log('⚙️ Full response structure:', JSON.stringify(response, null, 2));
-      
       if (response.success && response.data) {
         // Handle paginated response
         const responseData = response.data as { 
@@ -66,11 +57,6 @@ export default function ConfigPage() {
           (response.data as any)?.total ||
           (response.data as any)?.count ||
           (Array.isArray(configsData) ? configsData.length : 0);
-        
-        console.log('⚙️ Configs data:', configsData);
-        console.log('⚙️ Total count:', totalCount);
-        console.log('⚙️ Pagination info:', responseData?.pagination);
-        
         setConfigs(configsData);
         setTotal(totalCount);
       } else {
@@ -103,19 +89,16 @@ export default function ConfigPage() {
   };
 
   const handleFilterChange = useCallback((newFilters: TableFilters) => {
-    console.log('⚙️ Filter changed:', newFilters);
     setFilterValues(newFilters);
     setPage(1); // Reset to first page when filters change
   }, []);
 
   const handleSort = useCallback((field: string, direction: 'ASC' | 'DESC') => {
-    console.log('⚙️ Sort changed:', field, direction);
     setSortConfig({ field, direction });
     setPage(1); // Reset to first page when sort changes
   }, []);
 
   const handleLimitChange = useCallback((newLimit: number) => {
-    console.log('⚙️ Limit changed:', newLimit);
     setLimit(newLimit);
     setPage(1); // Reset to first page when limit changes
   }, []);
@@ -264,8 +247,6 @@ export default function ConfigPage() {
   }
 
   // Debug pagination props
-  console.log('⚙️ Rendering DataTable with pagination props:', { page, limit, total });
-
   return (
     <BasePageLayout
       title="System Configuration"
@@ -303,13 +284,12 @@ export default function ConfigPage() {
           limit,
           total,
           onPageChange: (newPage: number) => {
-            console.log('⚙️ Page changed to:', newPage);
             setPage(newPage);
           },
           onLimitChange: handleLimitChange
         }}
         showExport
-        onExport={() => console.log('Export config data')}
+        onExport={() => {}}
       />
     </BasePageLayout>
   );

@@ -34,8 +34,6 @@ export default function PublicQuizPage() {
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    console.log('=== PUBLIC QUIZ PAGE ===');
-    console.log('Token:', token);
     if (token) {
       loadQuiz();
     }
@@ -69,11 +67,7 @@ export default function PublicQuizPage() {
       setLoading(true);
       setError(null);
 
-      console.log('Loading quiz with token:', token);
       const response = await API.public.getPublicQuiz(token);
-      console.log('Quiz response:', response);
-      console.log('Response success:', response.success);
-      console.log('Response data:', response.data);
 
       if (response.success && response.data) {
         // The API returns the quiz directly in data with questions as a property
@@ -83,18 +77,6 @@ export default function PublicQuizPage() {
         const quizQuestions = response.data.questions || [];
         
         setQuestions(quizQuestions);
-        console.log('Quiz loaded successfully:', {
-          title: response.data.title,
-          questionsCount: quizQuestions.length,
-          questionsPerPage: response.data.questionsPerPage || 5,
-          isPublished: response.data.isPublished,
-          isActive: response.data.isActive,
-          actualQuestions: quizQuestions.map(q => ({
-            id: q.id,
-            type: (q as any).questionType || q.type,
-            text: ((q as any).questionText || q.question || 'No text')?.substring(0, 50) + '...'
-          }))
-        });
       } else {
         const errorMsg = response?.message || 'Quiz not found or not published';
         setError(errorMsg);
@@ -125,8 +107,6 @@ export default function PublicQuizPage() {
     setValidationErrors({});
     
     try {
-      console.log('Starting quiz with participant info:', participantInfo);
-      
       if (!quiz) {
         setError('Quiz not found');
         setIsStarting(false);
@@ -155,8 +135,6 @@ export default function PublicQuizPage() {
       const duration = quiz?.durationMinutes || 60;
       setTimeLeft(duration * 60); // Convert minutes to seconds
       setShowQuiz(true);
-      
-      console.log('Quiz started successfully with local attemptId:', localAttemptId);
     } catch (err: any) {
       console.error('Failed to start quiz:', err);
       setError(err?.message || 'Gagal memulai quiz');
@@ -183,7 +161,6 @@ export default function PublicQuizPage() {
         quizId: quiz.id,
         answers: answersArray
       });
-      console.log('Answers auto-saved successfully');
     } catch (err: any) {
       console.error('Failed to auto-save answers:', err);
       // Don't show error to user for auto-save failures
@@ -290,7 +267,7 @@ export default function PublicQuizPage() {
           }));
         }
       } catch (apiErr: any) {
-        console.log('API check failed, falling back to localStorage:', apiErr);
+
       }
       
       // Check localStorage for submission history
@@ -317,13 +294,12 @@ export default function PublicQuizPage() {
               name: data.name || prev.name
             }));
           } catch (e) {
-            console.log('Could not parse saved participant data');
+            // Could not parse saved participant data
           }
         }
         return false; // Not submitted
       }
     } catch (err: any) {
-      console.log('Error checking submission status:', err);
       setHasSubmittedBefore(false);
       return false; // Assume not submitted on error
     } finally {
@@ -384,8 +360,6 @@ export default function PublicQuizPage() {
           email: participantInfo.email,
           name: participantInfo.name
         }));
-        
-        console.log('Quiz submitted successfully, saved to localStorage');
         
         // Show completion message instead of redirecting
         setShowQuiz(false);
@@ -599,15 +573,6 @@ export default function PublicQuizPage() {
     }
     return answer?.toString().trim().length > 0;
   }).length;
-  
-  console.log('Pagination info:', {
-    currentPage,
-    totalPages,
-    questionsPerPage,
-    totalQuestions: questions.length,
-    startIndex,
-    currentPageQuestionsCount: currentPageQuestions.length
-  });
 
   return (
     <div className="min-h-screen bg-gray-50">

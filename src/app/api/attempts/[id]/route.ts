@@ -9,8 +9,6 @@ export async function DELETE(
     const { id } = await params;
     const attemptId = parseInt(id);
     
-    console.log('🗑️ Deleting attempt:', attemptId);
-    
     if (!attemptId || isNaN(attemptId)) {
       const response: ApiResponse = {
         success: false,
