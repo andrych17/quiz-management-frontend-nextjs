@@ -55,7 +55,9 @@ export interface User {
   createdAt: string;
   updatedAt?: string;
   locationKey?: string;
+  locationName?: string;
   serviceKey?: string;
+  serviceName?: string;
   isActive?: boolean;
   location?: {
     key: string;
@@ -89,12 +91,14 @@ export interface Quiz {
   serviceType?: string;
   quizType?: 'scheduled' | 'manual';
   locationKey?: string;
+  locationName?: string;
   location?: {
     id: number;
     key: string;
     value: string;
   };
   serviceKey?: string;
+  serviceName?: string;
   service?: {
     id: number;
     key: string;

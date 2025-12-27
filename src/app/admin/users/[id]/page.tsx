@@ -12,13 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { CheckCircle, XCircle } from "lucide-react";
 
@@ -29,7 +29,7 @@ interface PageProps {
 export default function UserDetailPage({ params }: PageProps) {
   const router = useRouter();
   const { isSuperadmin } = useAuth();
-  
+
   const [userId, setUserId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,8 +42,8 @@ export default function UserDetailPage({ params }: PageProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Options for dropdowns
-  const [locationOptions, setLocationOptions] = useState<Array<{value: string, label: string}>>([]);
-  const [serviceOptions, setServiceOptions] = useState<Array<{value: string, label: string}>>([]);
+  const [locationOptions, setLocationOptions] = useState<Array<{ value: string, label: string }>>([]);
+  const [serviceOptions, setServiceOptions] = useState<Array<{ value: string, label: string }>>([]);
 
   const isCreateMode = userId === "new";
 
@@ -182,7 +182,7 @@ export default function UserDetailPage({ params }: PageProps) {
       setLoading(false);
       return;
     }
-    
+
     if (isCreateMode) {
       loadOptions();
     } else {
@@ -234,16 +234,16 @@ export default function UserDetailPage({ params }: PageProps) {
 
       if (result.success) {
         const successMessage = isCreateMode ? 'User created successfully!' : 'User updated successfully!';
-        
+
         // Reset unsaved changes flag
         setHasUnsavedChanges(false);
-        
+
         // Show success dialog
         setDialogType('success');
         setDialogMessage(successMessage);
         setShowDialog(true);
         setError(null);
-        
+
         // Reset password fields after save
         setFormData(prev => ({
           ...prev,
@@ -258,7 +258,7 @@ export default function UserDetailPage({ params }: PageProps) {
       }
     } catch (err: any) {
       console.error('Failed to save user:', err);
-      
+
       // Show error dialog
       setDialogType('error');
       setDialogMessage(err?.message || 'Failed to save user');
@@ -283,13 +283,13 @@ export default function UserDetailPage({ params }: PageProps) {
     try {
       setDeleting(true);
       const result = await API.users.deleteUser(Number(userId));
-      
+
       if (result.success) {
         setShowDeleteConfirm(false);
         setDialogType('success');
         setDialogMessage('User berhasil dihapus!');
         setShowDialog(true);
-        
+
         setTimeout(() => {
           router.push('/admin/users');
         }, 1500);
@@ -437,7 +437,7 @@ export default function UserDetailPage({ params }: PageProps) {
             <div>
               <Label htmlFor="role">Role</Label>
               <Select
-                value={formData.role}
+                value={formData.role || undefined}
                 onValueChange={(value) => {
                   setFormData({ ...formData, role: value as 'admin' | 'user' | 'superadmin' });
                   setHasUnsavedChanges(true);
@@ -508,7 +508,7 @@ export default function UserDetailPage({ params }: PageProps) {
               <div>
                 <Label htmlFor="status">Status</Label>
                 <Select
-                  value={formData.isActive ? 'active' : 'inactive'}
+                  value={formData.isActive !== undefined ? (formData.isActive ? 'active' : 'inactive') : undefined}
                   onValueChange={(value) => {
                     setFormData({ ...formData, isActive: value === 'active' });
                     setHasUnsavedChanges(true);
@@ -644,9 +644,8 @@ export default function UserDetailPage({ params }: PageProps) {
         <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                dialogType === 'success' ? 'bg-green-100' : 'bg-red-100'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${dialogType === 'success' ? 'bg-green-100' : 'bg-red-100'
+                }`}>
                 {dialogType === 'success' ? (
                   <CheckCircle className="w-5 h-5 text-green-600" />
                 ) : (
@@ -660,7 +659,7 @@ export default function UserDetailPage({ params }: PageProps) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button 
+            <Button
               onClick={handleDialogClose}
               variant={dialogType === 'success' ? 'default' : 'destructive'}
             >

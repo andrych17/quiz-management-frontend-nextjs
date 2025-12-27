@@ -18,8 +18,8 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
-  const [locationOptions, setLocationOptions] = useState<Array<{value: string, label: string}>>([]);
-  const [serviceOptions, setServiceOptions] = useState<Array<{value: string, label: string}>>([]);
+  const [locationOptions, setLocationOptions] = useState<Array<{ value: string, label: string }>>([]);
+  const [serviceOptions, setServiceOptions] = useState<Array<{ value: string, label: string }>>([]);
   const router = useRouter();
   const { canManageUsers } = useAuth();
 
@@ -30,8 +30,8 @@ export default function UsersPage() {
     setLoading(true);
     setError(null);
     try {
-      const params = { 
-        page, 
+      const params = {
+        page,
         limit,
         ...memoizedFilterValues // Apply filters
       };
@@ -86,7 +86,7 @@ export default function UsersPage() {
   useEffect(() => {
     // Load config options first
     loadConfigOptions();
-    
+
     // Only load users if user can manage them
     if (canManageUsers) {
       loadUsers();
@@ -166,13 +166,12 @@ export default function UsersPage() {
       key: "role",
       label: "Role",
       render: (value: unknown) => (
-        <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg ${
-          String(value) === 'superadmin' 
-            ? 'bg-gradient-to-r from-purple-50 to-purple-100 text-purple-800 border border-purple-200' 
-            : String(value) === 'admin'
+        <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg ${String(value) === 'superadmin'
+          ? 'bg-gradient-to-r from-purple-50 to-purple-100 text-purple-800 border border-purple-200'
+          : String(value) === 'admin'
             ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-800 border border-blue-200'
             : 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-800 border border-gray-200'
-        }`}>
+          }`}>
           <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
@@ -184,8 +183,8 @@ export default function UsersPage() {
       key: "service",
       label: "Service",
       render: (value: unknown, row: ApiUser) => {
-        // Use service object from user data, fallback to serviceKey
-        const serviceName = row.service?.value || row.serviceKey || 'Not Assigned';
+        // Priority: serviceName > service.value > serviceKey > 'Not Assigned'
+        const serviceName = row.serviceName || row.service?.value || row.serviceKey || 'Not Assigned';
         return (
           <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-blue-50 text-blue-800">
             <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,8 +199,8 @@ export default function UsersPage() {
       key: "location",
       label: "Location",
       render: (value: unknown, row: ApiUser) => {
-        // Use location object from user data, fallback to locationKey
-        const locationName = row.location?.value || row.locationKey || 'Not Assigned';
+        // Priority: locationName > location.value > locationKey > 'Not Assigned'
+        const locationName = row.locationName || row.location?.value || row.locationKey || 'Not Assigned';
         return (
           <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-green-50 text-green-800">
             <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,26 +216,18 @@ export default function UsersPage() {
       key: "isActive",
       label: "Status",
       render: (value: unknown, row: ApiUser) => {
-          userId: row.id, 
-          value, 
-          type: typeof value, 
-          rowIsActive: row.isActive,
-          rowIsActiveType: typeof row.isActive 
-        });
         // Check both the value parameter and row.isActive property with type safety
         const isActive = (value === true || value === 'true' || value === 1 || value === '1') ||
-                         (row.isActive === true) ||
-                         (String(row.isActive) === 'true') ||
-                         (Number(row.isActive) === 1);
+          (row.isActive === true) ||
+          (String(row.isActive) === 'true') ||
+          (Number(row.isActive) === 1);
         return (
-          <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg ${
-            isActive 
-              ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border border-green-200' 
-              : 'bg-gradient-to-r from-red-50 to-rose-50 text-red-800 border border-red-200'
-          }`}>
-            <span className={`w-2 h-2 mr-2 rounded-full ${
-              isActive ? 'bg-green-400' : 'bg-red-400'
-            }`}></span>
+          <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg ${isActive
+            ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border border-green-200'
+            : 'bg-gradient-to-r from-red-50 to-rose-50 text-red-800 border border-red-200'
+            }`}>
+            <span className={`w-2 h-2 mr-2 rounded-full ${isActive ? 'bg-green-400' : 'bg-red-400'
+              }`}></span>
             {isActive ? 'Active' : 'Inactive'}
           </span>
         );
@@ -396,7 +387,7 @@ export default function UsersPage() {
           onLimitChange: handleLimitChange
         }}
         showExport
-        onExport={() => {}}
+        onExport={() => { }}
       />
     </BasePageLayout>
   );

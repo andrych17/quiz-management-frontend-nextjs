@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { API } from '@/lib/api-client';
 import BasePageLayout from '@/components/ui/layout/BasePageLayout';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/common/Modal';
 
 interface QuizAnswer {
   id: number;
@@ -57,6 +58,8 @@ export default function QuizResultDetailPage() {
   const [result, setResult] = useState<QuizResultDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -81,6 +84,25 @@ export default function QuizResultDetailPage() {
       setError(err.message || 'Failed to load quiz result');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await API.attempts.deleteAttempt(id);
+      if (response.success) {
+        router.push('/admin/quiz-results');
+      } else {
+        setError(response.message || 'Failed to delete quiz result');
+        setShowDeleteModal(false);
+      }
+    } catch (err: any) {
+      console.error('Error deleting quiz result:', err);
+      setError(err.message || 'Failed to delete quiz result');
+      setShowDeleteModal(false);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -126,13 +148,21 @@ export default function QuizResultDetailPage() {
       ) : result ? (
         <div>
           {/* Header Actions */}
-      <div className="mb-6">
+      <div className="mb-6 flex justify-between items-center">
         <Button
           variant="outline"
           onClick={() => router.back()}
-          className="mr-3"
         >
           ← Back to Results
+        </Button>
+        <Button
+          onClick={() => setShowDeleteModal(true)}
+          className="bg-red-600 hover:bg-red-700 text-white"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Delete Result
         </Button>
       </div>
 
@@ -346,6 +376,37 @@ export default function QuizResultDetailPage() {
       </div>
         </div>
       ) : null}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <Modal
+          isOpen={true}
+          onClose={() => setShowDeleteModal(false)}
+          title="Delete Quiz Result"
+        >
+          <div className="p-4">
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this quiz result? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </BasePageLayout>
   );
 }

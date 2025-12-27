@@ -13,13 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { CheckCircle, XCircle } from "lucide-react";
 
@@ -70,13 +70,13 @@ export default function ConfigDetailPage({ params }: PageProps) {
 
   useEffect(() => {
     if (!paramId) return;
-    
+
     const loadConfig = async () => {
       if (!isCreateMode) {
         try {
           setLoading(true);
           const response = await ConfigAPI.getConfig(parseInt(paramId));
-          
+
           if (response.success && response.data) {
             const config = response.data;
             setFormData({
@@ -103,7 +103,7 @@ export default function ConfigDetailPage({ params }: PageProps) {
       }
       setLoading(false);
     };
-    
+
     loadConfig();
   }, [paramId, isCreateMode]);
 
@@ -139,13 +139,13 @@ export default function ConfigDetailPage({ params }: PageProps) {
       setSaving(true);
       setError(null);
       setSuccess(null);
-      
+
       // Validate required fields
       if (!formData.group || !formData.key || !formData.value) {
         setError('Please fill in all required fields');
         return;
       }
-      
+
       const configData = {
         group: formData.group,
         key: formData.key,
@@ -154,22 +154,22 @@ export default function ConfigDetailPage({ params }: PageProps) {
         order: formData.order,
         isActive: formData.isActive
       };
-      
+
       let response;
       if (isCreateMode) {
         response = await ConfigAPI.createConfig(configData);
       } else {
         response = await ConfigAPI.updateConfig(parseInt(paramId), configData);
       }
-      
+
       if (response.success) {
-        const successMessage = isCreateMode 
-          ? 'Configuration created successfully!' 
+        const successMessage = isCreateMode
+          ? 'Configuration created successfully!'
           : 'Configuration updated successfully!';
-        
+
         // Reset unsaved changes flag
         setHasUnsavedChanges(false);
-        
+
         // Show success dialog
         setDialogType('success');
         setDialogMessage(successMessage);
@@ -184,7 +184,7 @@ export default function ConfigDetailPage({ params }: PageProps) {
     } catch (err) {
       console.error('Error saving config:', err);
       let errorMessage = 'Failed to connect to server';
-      
+
       if (err instanceof ApiError) {
         // Handle validation errors - check if errors contain different info than main message
         if (err.errors && err.errors.length > 0) {
@@ -201,7 +201,7 @@ export default function ConfigDetailPage({ params }: PageProps) {
       } else if (err instanceof Error) {
         errorMessage = err.message;
       }
-      
+
       // Show error dialog
       setDialogType('error');
       setDialogMessage(errorMessage);
@@ -233,13 +233,13 @@ export default function ConfigDetailPage({ params }: PageProps) {
     try {
       setDeleting(true);
       const result = await ConfigAPI.deleteConfig(parseInt(paramId));
-      
+
       if (result.success) {
         setShowDeleteConfirm(false);
         setDialogType('success');
         setDialogMessage('Konfigurasi berhasil dihapus!');
         setShowDialog(true);
-        
+
         setTimeout(() => {
           router.push('/admin/config');
         }, 1500);
@@ -296,7 +296,7 @@ export default function ConfigDetailPage({ params }: PageProps) {
 
 
 
-        
+
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -304,7 +304,7 @@ export default function ConfigDetailPage({ params }: PageProps) {
                 Group <span className="text-red-500">*</span>
               </Label>
               <Select
-                value={formData.group}
+                value={formData.group || undefined}
                 onValueChange={(value) => {
                   setFormData({ ...formData, group: value });
                   setHasUnsavedChanges(true);
@@ -381,7 +381,7 @@ export default function ConfigDetailPage({ params }: PageProps) {
               <div>
                 <Label htmlFor="status">Status</Label>
                 <Select
-                  value={formData.isActive ? 'active' : 'inactive'}
+                  value={formData.isActive !== undefined ? (formData.isActive ? 'active' : 'inactive') : undefined}
                   onValueChange={(value) => {
                     setFormData({ ...formData, isActive: value === 'active' });
                     setHasUnsavedChanges(true);
@@ -415,7 +415,7 @@ export default function ConfigDetailPage({ params }: PageProps) {
             />
           </div>
 
-         
+
         </div>
 
         {/* Metadata Section */}
@@ -540,9 +540,8 @@ export default function ConfigDetailPage({ params }: PageProps) {
         <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                dialogType === 'success' ? 'bg-green-100' : 'bg-red-100'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${dialogType === 'success' ? 'bg-green-100' : 'bg-red-100'
+                }`}>
                 {dialogType === 'success' ? (
                   <CheckCircle className="w-5 h-5 text-green-600" />
                 ) : (
@@ -556,7 +555,7 @@ export default function ConfigDetailPage({ params }: PageProps) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button 
+            <Button
               onClick={handleDialogClose}
               variant={dialogType === 'success' ? 'default' : 'destructive'}
             >

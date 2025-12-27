@@ -46,12 +46,10 @@ export default function QuizResultsPage() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'submittedAt', direction: 'DESC' });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
 
   // Config options for filters
   const [serviceOptions, setServiceOptions] = useState<Array<{key: string, name: string}>>([]);
   const [locationOptions, setLocationOptions] = useState<Array<{key: string, name: string}>>([]);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadConfigOptions();
@@ -154,24 +152,6 @@ export default function QuizResultsPage() {
 
   const handleView = (result: QuizResult) => {
     router.push(`/admin/quiz-results/${result.id}`);
-  };
-
-  const handleDelete = async (id: number) => {
-    setIsDeleting(true);
-    try {
-      const response = await API.attempts.deleteAttempt(id);
-      if (response.success) {
-        await loadResults();
-        setShowDeleteModal(null);
-      } else {
-        setError(response.message || 'Failed to delete quiz result');
-      }
-    } catch (err: any) {
-      console.error('Error deleting quiz result:', err);
-      setError(err.message || 'Failed to delete quiz result');
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   // Create filter options based on loaded config
@@ -358,16 +338,6 @@ export default function QuizResultsPage() {
       ),
       variant: 'primary' as const
     },
-    {
-      label: 'Delete',
-      onClick: (result: QuizResult) => setShowDeleteModal(result.id),
-      icon: (
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-      ),
-      variant: 'danger' as const
-    },
   ];
 
   return (
@@ -408,37 +378,6 @@ export default function QuizResultsPage() {
           }
         }}
       />
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <Modal
-          isOpen={true}
-          onClose={() => setShowDeleteModal(null)}
-          title="Delete Quiz Result"
-        >
-          <div className="p-4">
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this quiz result? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteModal(null)}
-                disabled={isDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => handleDelete(showDeleteModal)}
-                disabled={isDeleting}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </BasePageLayout>
   );
 }

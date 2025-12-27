@@ -19,8 +19,8 @@ export default function QuizzesPage() {
   const [total, setTotal] = useState(0);
   const [filterValues, setFilterValues] = useState<TableFilters>({});
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'createdAt', direction: 'DESC' });
-  const [locationOptions, setLocationOptions] = useState<Array<{value: string, label: string}>>([]);
-  const [serviceOptions, setServiceOptions] = useState<Array<{value: string, label: string}>>([]);
+  const [locationOptions, setLocationOptions] = useState<Array<{ value: string, label: string }>>([]);
+  const [serviceOptions, setServiceOptions] = useState<Array<{ value: string, label: string }>>([]);
 
   // Add logging for state changes
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function QuizzesPage() {
     setLoading(true);
     setError(null);
     try {
-        // Prepare API parameters to match API client structure
+      // Prepare API parameters to match API client structure
       const apiParams = {
         filters: Object.keys(filters).length > 0 ? filters : undefined,
         sort: sort ? {
@@ -58,10 +58,10 @@ export default function QuizzesPage() {
         limit: 10
       };
       const res = await API.quizzes.getQuizzes(apiParams);
-      const response = res.data as { 
-        items?: ApiQuiz[], 
-        data?: ApiQuiz[], 
-        total?: number, 
+      const response = res.data as {
+        items?: ApiQuiz[],
+        data?: ApiQuiz[],
+        total?: number,
         count?: number,
         pagination?: {
           totalItems?: number;
@@ -130,26 +130,27 @@ export default function QuizzesPage() {
       label: "Quiz Title",
       sortable: true,
       render: (value: unknown, row: ApiQuiz) => {
-        const isPublished = row.isPublished;
-        const isActive = row.isActive === true;
         const count = Array.isArray(row.questions) ? row.questions.length : 0;
         return (
           <div className="min-w-[200px]">
             <div className="font-medium text-gray-900">{row.title}</div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs text-gray-500">{count} soal</span>
-              <span className={`inline-flex items-center px-1.5 py-0.5 text-xs rounded ${
-                isPublished ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-              }`}>
-                {isPublished ? 'Published' : 'Draft'}
-              </span>
-              <span className={`inline-flex items-center px-1.5 py-0.5 text-xs rounded ${
-                isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-              }`}>
-                {isActive ? 'Aktif' : 'Nonaktif'}
-              </span>
             </div>
           </div>
+        );
+      }
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (value: unknown, row: ApiQuiz) => {
+        const isPublished = row.isPublished;
+        return (
+          <span className={`inline-flex items-center px-2 py-1 text-xs rounded ${isPublished ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+            }`}>
+            {isPublished ? 'Published' : 'Draft'}
+          </span>
         );
       }
     },
@@ -157,7 +158,8 @@ export default function QuizzesPage() {
       key: "service",
       label: "Service",
       render: (value: unknown, row: ApiQuiz) => {
-        const serviceName = row.service?.value || row.serviceKey || row.serviceType || 'Not Assigned';
+        // Priority: serviceName > service.value > serviceKey > serviceType > 'Not Assigned'
+        const serviceName = row.serviceName || row.service?.value || row.serviceKey || row.serviceType || 'Not Assigned';
         return (
           <span className="text-xs text-gray-700">
             {serviceName}
@@ -169,7 +171,8 @@ export default function QuizzesPage() {
       key: "location",
       label: "Location",
       render: (value: unknown, row: ApiQuiz) => {
-        const locationName = row.location?.value || row.locationKey || 'Global';
+        // Priority: locationName > location.value > locationKey > 'Global'
+        const locationName = row.locationName || row.location?.value || row.locationKey || 'Global';
         return (
           <span className="text-xs text-gray-700">
             {locationName}
@@ -187,7 +190,7 @@ export default function QuizzesPage() {
           <div className="text-xs text-gray-600">
             {date.toLocaleDateString('id-ID', {
               day: '2-digit',
-              month: 'short', 
+              month: 'short',
               year: 'numeric'
             })}
           </div>
@@ -247,10 +250,10 @@ export default function QuizzesPage() {
       placeholder: 'Choose Location',
       options: locationOptions
     };
-    
+
     const assignedServiceFilter = {
       key: 'assignedService',
-      label: 'Assigned Service', 
+      label: 'Assigned Service',
       type: 'select',
       placeholder: 'Choose Service',
       options: serviceOptions
@@ -270,12 +273,11 @@ export default function QuizzesPage() {
       },
       {
         key: 'isPublished',
-        label: 'Status',
+        label: 'Status Publish',
         type: 'select',
         placeholder: 'Choose Status',
         options: [
-          { value: 'true', label: 'Published' },
-          { value: 'false', label: 'Draft' }
+          { value: 'true', label: 'Published' }
         ]
       },
       assignedLocationFilter,
@@ -369,7 +371,7 @@ export default function QuizzesPage() {
           onLimitChange: handleLimitChange
         }}
         showExport
-        onExport={() => {}}
+        onExport={() => { }}
       />
     </BasePageLayout>
   );

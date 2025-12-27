@@ -8,13 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { CheckCircle, XCircle, Plus, Trash2, Edit2, GripVertical, ChevronUp, ChevronDown, Image as ImageIcon, Copy } from "lucide-react";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
@@ -39,7 +39,7 @@ interface Question {
 
 export default function QuizDetailPage({ params }: PageProps) {
   const router = useRouter();
-  
+
   const [quizId, setQuizId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -51,8 +51,8 @@ export default function QuizDetailPage({ params }: PageProps) {
   const [activeTab, setActiveTab] = useState<'general' | 'questions' | 'scoring'>('general');
 
   // Options for dropdowns
-  const [locationOptions, setLocationOptions] = useState<Array<{value: string, label: string}>>([]);
-  const [serviceOptions, setServiceOptions] = useState<Array<{value: string, label: string}>>([]);
+  const [locationOptions, setLocationOptions] = useState<Array<{ value: string, label: string }>>([]);
+  const [serviceOptions, setServiceOptions] = useState<Array<{ value: string, label: string }>>([]);
 
   const isCreateMode = quizId === "new";
 
@@ -75,9 +75,9 @@ export default function QuizDetailPage({ params }: PageProps) {
   const [questionError, setQuestionError] = useState<string>('');
 
   // Scoring templates state - Simple mapping of correct answers to scores
-  const [scoringMap, setScoringMap] = useState<Array<{correctAnswer: number, score: number}>>([]);
+  const [scoringMap, setScoringMap] = useState<Array<{ correctAnswer: number, score: number }>>([]);
   const [showScoringDialog, setShowScoringDialog] = useState(false);
-  const [editingScoring, setEditingScoring] = useState<{correctAnswer: number, score: number} | null>(null);
+  const [editingScoring, setEditingScoring] = useState<{ correctAnswer: number, score: number } | null>(null);
   const [scoringType, setScoringType] = useState<'linear' | 'iq-conversion'>('iq-conversion');
 
   // Quiz token/link state
@@ -129,7 +129,7 @@ export default function QuizDetailPage({ params }: PageProps) {
 
   useEffect(() => {
     if (!quizId) return;
-    
+
     const loadData = async () => {
       if (!isCreateMode) {
         await loadQuizData();
@@ -137,7 +137,7 @@ export default function QuizDetailPage({ params }: PageProps) {
         await loadOptions();
       }
     };
-    
+
     loadData();
   }, [quizId, isCreateMode]);
 
@@ -214,7 +214,7 @@ export default function QuizDetailPage({ params }: PageProps) {
 
       if (quizRes.success && quizRes.data) {
         const quizData = quizRes.data;
-        
+
         setFormData({
           title: quizData.title || '',
           description: quizData.description || '',
@@ -242,17 +242,17 @@ export default function QuizDetailPage({ params }: PageProps) {
         const transformedQuestions: Question[] = (quizData.questions || []).map((q: any, index: number) => {
           // Convert questionType from backend format (multiple-choice) to frontend format (multiple_choice)
           const frontendQuestionType = q.questionType ? q.questionType.replace(/-/g, '_') : 'multiple_choice';
-          
+
           // For multiple choice, convert option values to indices
           let correctAnswerArray = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer].filter(Boolean);
-          
+
           if (frontendQuestionType === 'multiple_choice' && q.options && correctAnswerArray.length > 0) {
             correctAnswerArray = correctAnswerArray.map((answer: string) => {
               const optionIndex = q.options.indexOf(answer);
               return optionIndex >= 0 ? optionIndex.toString() : answer;
             });
           }
-          
+
           return {
             id: q.id,
             questionText: q.questionText || '',
@@ -265,9 +265,9 @@ export default function QuizDetailPage({ params }: PageProps) {
             isRequired: q.isRequired !== undefined ? q.isRequired : true,
           };
         });
-        
+
         setQuestions(transformedQuestions);
-        
+
         // Load scoring map - convert from new backend format
         const scoringData = quizData.scoringTemplates || [];
         const scoreMap = scoringData.map((s: any) => ({
@@ -309,7 +309,7 @@ export default function QuizDetailPage({ params }: PageProps) {
         const totalQuestions = questions.length;
         const maxCorrectAnswer = Math.max(...scoringMap.map(s => s.correctAnswer));
         const minCorrectAnswer = Math.min(...scoringMap.map(s => s.correctAnswer));
-        
+
         // Check if scoring covers 0 to totalQuestions
         if (minCorrectAnswer !== 0) {
           setDialogType('error');
@@ -317,14 +317,14 @@ export default function QuizDetailPage({ params }: PageProps) {
           setShowDialog(true);
           return;
         }
-        
+
         if (maxCorrectAnswer !== totalQuestions) {
           setDialogType('error');
           setDialogMessage(`❌ Template scoring tidak sesuai jumlah soal!\n\nQuiz memiliki ${totalQuestions} soal, tapi scoring template maksimal untuk ${maxCorrectAnswer} jawaban benar.\n\nSilakan generate ulang scoring template yang sesuai.`);
           setShowDialog(true);
           return;
         }
-        
+
         // Check if all numbers from 0 to totalQuestions are covered
         const missingNumbers: number[] = [];
         for (let i = 0; i <= totalQuestions; i++) {
@@ -332,19 +332,19 @@ export default function QuizDetailPage({ params }: PageProps) {
             missingNumbers.push(i);
           }
         }
-        
+
         if (missingNumbers.length > 0) {
-          const missingStr = missingNumbers.length > 5 
+          const missingStr = missingNumbers.length > 5
             ? `${missingNumbers.slice(0, 5).join(', ')}... (${missingNumbers.length} lainnya)`
             : missingNumbers.join(', ');
-          
+
           setDialogType('error');
           setDialogMessage(`❌ Template scoring tidak lengkap!\n\nQuiz memiliki ${totalQuestions} soal. Belum ada template untuk: ${missingStr} jawaban benar.\n\nHarus ada template untuk 0 sampai ${totalQuestions} jawaban benar.\n\nSilakan generate ulang scoring template.`);
           setShowDialog(true);
           return;
         }
       }
-      
+
       // Warn if no scoring templates
       if (questions.length > 0 && scoringMap.length === 0) {
         const confirmed = window.confirm(
@@ -376,7 +376,7 @@ export default function QuizDetailPage({ params }: PageProps) {
           } else if (s.correctAnswer === 0) {
             points = 1; // Default for 0 correct answers
           }
-          
+
           return {
             correctAnswers: s.correctAnswer,
             points: points
@@ -389,12 +389,12 @@ export default function QuizDetailPage({ params }: PageProps) {
         quizData.questions = questions.map((q, index) => {
           // Convert questionType format: multiple_choice -> multiple-choice
           let apiQuestionType = q.questionType.replace(/_/g, '-');
-          
+
           // Filter out empty options before sending to backend
-          const filteredOptions = (q.options || []).filter(option => 
+          const filteredOptions = (q.options || []).filter(option =>
             option && typeof option === 'string' && option.trim() !== ''
           );
-          
+
           // Build question object
           const questionData: any = {
             questionText: q.questionText,
@@ -402,7 +402,7 @@ export default function QuizDetailPage({ params }: PageProps) {
             options: filteredOptions,
             order: index,
           };
-          
+
           // Add correctAnswer based on question type
           if (q.questionType === 'essay') {
             // For essay questions, always set empty string
@@ -421,7 +421,7 @@ export default function QuizDetailPage({ params }: PageProps) {
                   return a;
                 })
                 .filter(a => a && a.trim() !== '');
-              
+
               if (validAnswers.length > 0) {
                 questionData.correctAnswer = validAnswers[0];
               } else {
@@ -445,7 +445,7 @@ export default function QuizDetailPage({ params }: PageProps) {
               questionData.correctAnswer = '';
             }
           }
-            
+
           return questionData;
         });
       }
@@ -463,13 +463,13 @@ export default function QuizDetailPage({ params }: PageProps) {
       }
 
       if (result.success) {
-        const successMessage = isCreateMode 
-          ? 'Quiz created successfully!' 
+        const successMessage = isCreateMode
+          ? 'Quiz created successfully!'
           : 'Quiz updated successfully!';
-        
+
         // Reset unsaved changes flag
         setHasUnsavedChanges(false);
-        
+
         setDialogType('success');
         setDialogMessage(successMessage);
         setShowDialog(true);
@@ -501,13 +501,13 @@ export default function QuizDetailPage({ params }: PageProps) {
     try {
       setDeleting(true);
       const result = await API.quizzes.deleteQuiz(Number(quizId));
-      
+
       if (result.success) {
         setShowDeleteConfirm(false);
         setDialogType('success');
         setDialogMessage('Quiz berhasil dihapus!');
         setShowDialog(true);
-        
+
         // Redirect after showing success
         setTimeout(() => {
           router.push('/admin/quizzes');
@@ -543,7 +543,7 @@ export default function QuizDetailPage({ params }: PageProps) {
   const handleSubmitCopy = async () => {
     try {
       setCopying(true);
-      
+
       // Validate
       if (!copyFormData.title.trim()) {
         setDialogType('error');
@@ -567,7 +567,7 @@ export default function QuizDetailPage({ params }: PageProps) {
       if (questions.length > 0) {
         quizData.questions = questions.map((q, index) => {
           let apiQuestionType = q.questionType.replace(/_/g, '-');
-          
+
           // Build question object
           const questionData: any = {
             questionText: q.questionText,
@@ -575,7 +575,7 @@ export default function QuizDetailPage({ params }: PageProps) {
             options: q.options || [],
             order: index,
           };
-          
+
           // Add correctAnswer based on question type
           if (q.questionType === 'essay') {
             // For essay questions, always set empty string
@@ -584,7 +584,7 @@ export default function QuizDetailPage({ params }: PageProps) {
             // For multiple choice, convert indices back to actual option values
             const answerValue: any = q.correctAnswer;
             const options = questionData.options || [];
-            
+
             if (Array.isArray(answerValue)) {
               const validAnswers = answerValue
                 .map((a: any) => {
@@ -597,7 +597,7 @@ export default function QuizDetailPage({ params }: PageProps) {
                   return a;
                 })
                 .filter((a: any) => a && a.trim() !== '');
-              
+
               if (validAnswers.length > 0) {
                 questionData.correctAnswer = validAnswers[0];
               } else {
@@ -622,7 +622,7 @@ export default function QuizDetailPage({ params }: PageProps) {
               questionData.correctAnswer = '';
             }
           }
-          
+
           return questionData;
         });
       }
@@ -633,7 +633,7 @@ export default function QuizDetailPage({ params }: PageProps) {
       if (scoringMap.length > 0 && totalQuestions > 0) {
         // Check if scoring map is complete for the number of questions
         const maxCorrectAnswer = Math.max(...scoringMap.map(s => s.correctAnswer));
-        
+
         if (maxCorrectAnswer >= totalQuestions) {
           // Scoring map is complete, copy it with actual score values
           quizData.scoringTemplates = scoringMap
@@ -642,7 +642,7 @@ export default function QuizDetailPage({ params }: PageProps) {
               // Calculate points from score (score = correctAnswers × points)
               // If correctAnswer is 0, set points to score value directly
               const points = s.correctAnswer > 0 ? Math.round(s.score / s.correctAnswer) : s.score;
-              
+
               return {
                 correctAnswers: s.correctAnswer,
                 points: points
@@ -660,17 +660,17 @@ export default function QuizDetailPage({ params }: PageProps) {
 
       if (result.success) {
         setShowCopyDialog(false);
-        
+
         // Check if scoring was copied
         const scoringCopied = quizData.scoringTemplates && quizData.scoringTemplates.length > 0;
-        const successMsg = scoringCopied 
+        const successMsg = scoringCopied
           ? 'Quiz berhasil di-copy sebagai template baru!'
           : 'Quiz berhasil di-copy sebagai template baru!\n\n⚠️ Scoring template tidak di-copy karena jumlah soal berbeda. Silakan generate scoring template baru di tab Scoring.';
-        
+
         setDialogType('success');
         setDialogMessage(successMsg);
         setShowDialog(true);
-        
+
         // Redirect to new quiz after delay
         setTimeout(() => {
           if (result.data?.id) {
@@ -687,7 +687,7 @@ export default function QuizDetailPage({ params }: PageProps) {
     } catch (err: any) {
       console.error('Failed to copy quiz:', err);
       setDialogType('error');
-      
+
       // Show more detailed error message
       const errorMsg = err?.response?.data?.message || err?.message || 'Gagal meng-copy quiz';
       setDialogMessage(errorMsg);
@@ -714,7 +714,7 @@ export default function QuizDetailPage({ params }: PageProps) {
   };
 
   const handleEditQuestion = (question: Question, index: number) => {
-    setEditingQuestion({ 
+    setEditingQuestion({
       ...question,
       imageUrl: question.imageUrl || '',
       // Store the original index to identify which question to update
@@ -734,12 +734,12 @@ export default function QuizDetailPage({ params }: PageProps) {
   const handleMoveQuestion = (index: number, direction: 'up' | 'down') => {
     const newQuestions = [...questions];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
+
     if (targetIndex < 0 || targetIndex >= newQuestions.length) return;
-    
+
     // Swap questions
     [newQuestions[index], newQuestions[targetIndex]] = [newQuestions[targetIndex], newQuestions[index]];
-    
+
     // Update order
     const reorderedQuestions = newQuestions.map((q, i) => ({ ...q, order: i }));
     setQuestions(reorderedQuestions);
@@ -767,7 +767,7 @@ export default function QuizDetailPage({ params }: PageProps) {
     }
 
     const editIndex = (editingQuestion as any)._editIndex;
-    
+
     if (editIndex !== undefined && editIndex >= 0) {
       // Update existing question by index
       const updatedQuestions = [...questions];
@@ -816,7 +816,7 @@ export default function QuizDetailPage({ params }: PageProps) {
   const removeOptionFromEditingQuestion = (index: number) => {
     if (!editingQuestion || editingQuestion.options.length <= 2) return;
     const newOptions = editingQuestion.options.filter((_, i) => i !== index);
-    
+
     // Remove from correct answers and update indices
     const newcorrectAnswer = editingQuestion.correctAnswer
       .filter(a => a !== index.toString()) // Remove the deleted option's index
@@ -828,7 +828,7 @@ export default function QuizDetailPage({ params }: PageProps) {
         }
         return a;
       });
-    
+
     setEditingQuestion({
       ...editingQuestion,
       options: newOptions,
@@ -838,18 +838,18 @@ export default function QuizDetailPage({ params }: PageProps) {
 
   const toggleCorrectAnswer = (option: string, optionIndex?: number) => {
     if (!editingQuestion) return;
-    
+
     // Don't allow selecting empty options
     if (!option || option.trim() === '') {
       return;
     }
-    
+
     // For multiple choice, use index to avoid duplicate value issues
     // For true/false, use the actual value
     const identifier = editingQuestion.questionType === 'multiple_choice' && optionIndex !== undefined
       ? optionIndex.toString()
       : option;
-    
+
     const isSelected = editingQuestion.correctAnswer.includes(identifier);
     const newcorrectAnswer = isSelected
       ? editingQuestion.correctAnswer.filter(a => a !== identifier)
@@ -874,7 +874,7 @@ export default function QuizDetailPage({ params }: PageProps) {
 
     // Check if correctAnswer already exists
     const existingIndex = scoringMap.findIndex(s => s.correctAnswer === editingScoring.correctAnswer);
-    
+
     if (existingIndex >= 0) {
       // Update existing
       const newMap = [...scoringMap];
@@ -896,14 +896,14 @@ export default function QuizDetailPage({ params }: PageProps) {
       alert('⚠️ Belum ada pertanyaan!\n\nSilakan tambahkan pertanyaan terlebih dahulu di tab "Questions" sebelum generate scoring.');
       return;
     }
-    
+
     const totalQuestions = questions.length;
-    
+
     // Show info about total questions and confirm
     const confirmMessage = scoringMap.length > 0
       ? `📊 Informasi Quiz:\n• Total Pertanyaan: ${totalQuestions} soal\n• Sistem: Skor Linear (Persentase)\n• Maksimal Score: 100 poin\n\n⚠️ Anda sudah memiliki ${scoringMap.length} data scoring.\nGenerate Skor Linear akan MENGHAPUS semua data scoring yang ada dan menggantinya dengan template baru (0-${totalQuestions} jawaban benar).\n\nLanjutkan?`
       : `📊 Informasi Quiz:\n• Total Pertanyaan: ${totalQuestions} soal\n• Sistem: Skor Linear (Persentase)\n• Maksimal Score: 100 poin\n\nGenerate Skor Linear akan membuat ${totalQuestions + 1} mapping scoring.\n\nLanjutkan?`;
-    
+
     const confirmed = window.confirm(confirmMessage);
     if (!confirmed) {
       return;
@@ -911,7 +911,7 @@ export default function QuizDetailPage({ params }: PageProps) {
 
     // Clear old scoring data first
     setScoringMap([]);
-    
+
     // Generate linear scoring: percentage-based (max 100 points)
     const linearScoring = [];
     for (let i = 0; i <= totalQuestions; i++) {
@@ -921,15 +921,15 @@ export default function QuizDetailPage({ params }: PageProps) {
         score: score  // 0=0, totalQuestions=100, calculated proportionally
       });
     }
-    
+
     // Replace with new scoring data
     setScoringMap(linearScoring);
     setScoringType('linear');
     setHasUnsavedChanges(true);
-    
+
     const exampleMid = Math.floor(totalQuestions / 2);
     const exampleMidScore = Math.round((exampleMid / totalQuestions) * 100);
-    
+
     alert(`✅ Skor Linear berhasil di-generate!\n\n${totalQuestions + 1} mapping (0-${totalQuestions} jawaban benar) telah dibuat.\nFormula: (Benar ÷ ${totalQuestions}) × 100\n\nContoh:\n• 0 benar = 0 poin\n• ${exampleMid} benar = ${exampleMidScore} poin\n• ${totalQuestions} benar = 100 poin\n\nJangan lupa SAVE untuk menyimpan perubahan.`);
   };
 
@@ -946,23 +946,23 @@ export default function QuizDetailPage({ params }: PageProps) {
 
     // Clear old scoring data first
     setScoringMap([]);
-    
+
     // Generate IQ conversion scoring template based on standard conversion table
     const iqConversionScoring = [
-      {correctAnswer: 0, score: 73}, {correctAnswer: 1, score: 73}, {correctAnswer: 2, score: 73},
-      {correctAnswer: 3, score: 73}, {correctAnswer: 4, score: 73}, {correctAnswer: 5, score: 73},
-      {correctAnswer: 6, score: 73}, {correctAnswer: 7, score: 73}, {correctAnswer: 8, score: 77},
-      {correctAnswer: 9, score: 79}, {correctAnswer: 10, score: 84}, {correctAnswer: 11, score: 84},
-      {correctAnswer: 12, score: 88}, {correctAnswer: 13, score: 88}, {correctAnswer: 14, score: 92},
-      {correctAnswer: 15, score: 92}, {correctAnswer: 16, score: 94}, {correctAnswer: 17, score: 94},
-      {correctAnswer: 18, score: 98}, {correctAnswer: 19, score: 98}, {correctAnswer: 20, score: 101},
-      {correctAnswer: 21, score: 101}, {correctAnswer: 22, score: 104}, {correctAnswer: 23, score: 104},
-      {correctAnswer: 24, score: 108}, {correctAnswer: 25, score: 108}, {correctAnswer: 26, score: 112},
-      {correctAnswer: 27, score: 112}, {correctAnswer: 28, score: 116}, {correctAnswer: 29, score: 116},
-      {correctAnswer: 30, score: 120}, {correctAnswer: 31, score: 120}, {correctAnswer: 32, score: 123},
-      {correctAnswer: 33, score: 125}, {correctAnswer: 34, score: 132}, {correctAnswer: 35, score: 139},
+      { correctAnswer: 0, score: 73 }, { correctAnswer: 1, score: 73 }, { correctAnswer: 2, score: 73 },
+      { correctAnswer: 3, score: 73 }, { correctAnswer: 4, score: 73 }, { correctAnswer: 5, score: 73 },
+      { correctAnswer: 6, score: 73 }, { correctAnswer: 7, score: 73 }, { correctAnswer: 8, score: 77 },
+      { correctAnswer: 9, score: 79 }, { correctAnswer: 10, score: 84 }, { correctAnswer: 11, score: 84 },
+      { correctAnswer: 12, score: 88 }, { correctAnswer: 13, score: 88 }, { correctAnswer: 14, score: 92 },
+      { correctAnswer: 15, score: 92 }, { correctAnswer: 16, score: 94 }, { correctAnswer: 17, score: 94 },
+      { correctAnswer: 18, score: 98 }, { correctAnswer: 19, score: 98 }, { correctAnswer: 20, score: 101 },
+      { correctAnswer: 21, score: 101 }, { correctAnswer: 22, score: 104 }, { correctAnswer: 23, score: 104 },
+      { correctAnswer: 24, score: 108 }, { correctAnswer: 25, score: 108 }, { correctAnswer: 26, score: 112 },
+      { correctAnswer: 27, score: 112 }, { correctAnswer: 28, score: 116 }, { correctAnswer: 29, score: 116 },
+      { correctAnswer: 30, score: 120 }, { correctAnswer: 31, score: 120 }, { correctAnswer: 32, score: 123 },
+      { correctAnswer: 33, score: 125 }, { correctAnswer: 34, score: 132 }, { correctAnswer: 35, score: 139 },
     ];
-    
+
     // Replace with new scoring data
     setScoringMap(iqConversionScoring);
     setScoringType('iq-conversion');
@@ -1001,7 +1001,7 @@ export default function QuizDetailPage({ params }: PageProps) {
           <h1 className="text-2xl font-bold">
             {isCreateMode ? "Create Quiz" : "Edit Quiz"}
           </h1>
-          
+
           {!isCreateMode && (
             <div className="flex flex-col gap-3">
               {/* Display generated link if exists */}
@@ -1028,7 +1028,7 @@ export default function QuizDetailPage({ params }: PageProps) {
                   </div>
                 </div>
               )}
-              
+
               {/* Action buttons */}
               <div className="flex items-center gap-3">
                 {/* Generate/Regenerate Link button */}
@@ -1040,15 +1040,14 @@ export default function QuizDetailPage({ params }: PageProps) {
                       const result = await API.quizzes.generateQuizLink(Number(quizId));
                       if (result.success && result.data) {
                         const quizUrl = result.data.shortUrl || result.data.normalUrl;
-                        
-                        // Update local state with new URLs and published status
+
+                        // Update local state with new URLs (don't change published status)
                         setQuizToken(quizUrl);
-                        setFormData({ ...formData, isPublished: true });
-                        
+
                         setDialogType('success');
                         setDialogMessage(`Quiz link ${quizToken ? 'regenerated' : 'generated'} successfully and copied to clipboard!`);
                         setShowDialog(true);
-                        
+
                         // Also copy to clipboard
                         navigator.clipboard.writeText(quizUrl);
                       } else {
@@ -1076,22 +1075,22 @@ export default function QuizDetailPage({ params }: PageProps) {
                     try {
                       const isCurrentlyPublished = formData.isPublished;
                       let result;
-                      
+
                       if (isCurrentlyPublished) {
                         result = await API.quizzes.unpublishQuiz(Number(quizId));
                       } else {
                         result = await API.quizzes.publishQuiz(Number(quizId));
                       }
-                      
+
                       if (result.success) {
                         setFormData({ ...formData, isPublished: !isCurrentlyPublished });
-                        
+
                         // Update token if published
                         if (result.data?.shortUrl || result.data?.normalUrl) {
                           const newToken = result.data.shortUrl || result.data.normalUrl || '';
                           setQuizToken(newToken);
                         }
-                        
+
                         setDialogType('success');
                         setDialogMessage(`Quiz ${!isCurrentlyPublished ? 'published' : 'unpublished'} successfully!`);
                         setShowDialog(true);
@@ -1107,8 +1106,8 @@ export default function QuizDetailPage({ params }: PageProps) {
                       setShowDialog(true);
                     }
                   }}
-                  className={formData.isPublished 
-                    ? "bg-yellow-600 hover:bg-yellow-700 text-white" 
+                  className={formData.isPublished
+                    ? "bg-yellow-600 hover:bg-yellow-700 text-white"
                     : "bg-green-600 hover:bg-green-700 text-white"
                   }
                 >
@@ -1138,31 +1137,28 @@ export default function QuizDetailPage({ params }: PageProps) {
           <nav className="-mb-px flex space-x-8">
             <button
               onClick={() => setActiveTab('general')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'general'
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'general'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               General Info
             </button>
             <button
               onClick={() => setActiveTab('questions')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'questions'
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'questions'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               Questions ({questions.length})
             </button>
             <button
               onClick={() => setActiveTab('scoring')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'scoring'
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'scoring'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               Scoring ({scoringMap.length})
             </button>
@@ -1348,11 +1344,11 @@ export default function QuizDetailPage({ params }: PageProps) {
                               <span className="font-semibold text-sm">#{index + 1}</span>
                               <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
                                 {question.questionType === 'multiple_choice' ? 'Pilihan Ganda' :
-                                 question.questionType === 'true_false' ? 'Benar/Salah' : 'Essay'}
+                                  question.questionType === 'true_false' ? 'Benar/Salah' : 'Essay'}
                               </span>
                             </div>
                             <p className="text-sm font-medium">{question.questionText}</p>
-                            
+
                             {/* TODO: Image functionality - currently disabled
                             {question.imageUrl && (
                               <div className="mt-2 border rounded-lg p-2 bg-white inline-block">
@@ -1368,7 +1364,7 @@ export default function QuizDetailPage({ params }: PageProps) {
                             )}
                             */}
                           </div>
-                          
+
                           <div className="flex gap-2 ml-4">
                             <button
                               onClick={() => handleEditQuestion(question, index)}
@@ -1391,11 +1387,10 @@ export default function QuizDetailPage({ params }: PageProps) {
                               const isCorrect = question.correctAnswer.includes(optIndex.toString()) || question.correctAnswer.includes(option);
                               return (
                                 <div key={optIndex} className="flex items-center gap-2 text-sm">
-                                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
-                                    isCorrect
+                                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${isCorrect
                                       ? 'bg-green-100 text-green-700 font-semibold'
                                       : 'bg-gray-200 text-gray-600'
-                                  }`}>
+                                    }`}>
                                     {String.fromCharCode(65 + optIndex)}
                                   </span>
                                   <span className={isCorrect ? 'font-medium' : ''}>
@@ -1436,18 +1431,17 @@ export default function QuizDetailPage({ params }: PageProps) {
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold mb-2">Pemetaan Scoring</h3>
                     {questions.length > 0 && (
-                      <div className={`text-sm p-3 rounded-lg border ${
-                        scoringMap.length === questions.length + 1 
+                      <div className={`text-sm p-3 rounded-lg border ${scoringMap.length === questions.length + 1
                           ? 'bg-green-50 border-green-200 text-green-800'
                           : 'bg-yellow-50 border-yellow-200 text-yellow-800'
-                      }`}>
+                        }`}>
                         <div className="flex items-center gap-2">
                           <span className="text-lg">
                             {scoringMap.length === questions.length + 1 ? '✅' : '⚠️'}
                           </span>
                           <div>
                             <p className="font-semibold">
-                              {scoringMap.length === questions.length + 1 
+                              {scoringMap.length === questions.length + 1
                                 ? 'Template Scoring Lengkap'
                                 : 'Template Scoring Belum Lengkap'}
                             </p>
@@ -1465,20 +1459,19 @@ export default function QuizDetailPage({ params }: PageProps) {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Scoring Type Selection */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     📊 Tipe Sistem Scoring:
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div 
+                    <div
                       onClick={() => setScoringType('linear')}
-                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                        scoringType === 'linear' 
-                          ? 'border-blue-500 bg-blue-50 shadow-md' 
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${scoringType === 'linear'
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
                           : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-start gap-3">
                         <input
@@ -1500,14 +1493,13 @@ export default function QuizDetailPage({ params }: PageProps) {
                         </div>
                       </div>
                     </div>
-                    
-                    <div 
+
+                    <div
                       onClick={() => setScoringType('iq-conversion')}
-                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                        scoringType === 'iq-conversion' 
-                          ? 'border-blue-500 bg-blue-50 shadow-md' 
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${scoringType === 'iq-conversion'
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
                           : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-start gap-3">
                         <input
@@ -1531,12 +1523,12 @@ export default function QuizDetailPage({ params }: PageProps) {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2">
                   {scoringType === 'linear' ? (
-                    <Button 
-                      onClick={handleGenerateLinearScoring} 
+                    <Button
+                      onClick={handleGenerateLinearScoring}
                       size="sm"
                       variant="outline"
                       className="border-green-600 text-green-700 hover:bg-green-50"
@@ -1544,8 +1536,8 @@ export default function QuizDetailPage({ params }: PageProps) {
                       🔢 Generate Skor Linear (Max 100)
                     </Button>
                   ) : (
-                    <Button 
-                      onClick={handleGenerateIQConversionScoring} 
+                    <Button
+                      onClick={handleGenerateIQConversionScoring}
                       size="sm"
                       variant="outline"
                       className="border-purple-600 text-purple-700 hover:bg-purple-50"
@@ -1606,36 +1598,36 @@ export default function QuizDetailPage({ params }: PageProps) {
                       {scoringMap
                         .sort((a, b) => a.correctAnswer - b.correctAnswer)
                         .map((scoring) => (
-                        <tr key={scoring.correctAnswer} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {scoring.correctAnswer}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {scoring.score}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button
-                              onClick={() => {
-                                setEditingScoring({ ...scoring });
-                                setShowScoringDialog(true);
-                              }}
-                              className="text-blue-600 hover:text-blue-800 mr-4"
-                            >
-                              <Edit2 className="w-4 h-4 inline" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                const newMap = scoringMap.filter(s => s.correctAnswer !== scoring.correctAnswer);
-                                setScoringMap(newMap);
-                                setHasUnsavedChanges(true);
-                              }}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <Trash2 className="w-4 h-4 inline" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                          <tr key={scoring.correctAnswer} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {scoring.correctAnswer}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {scoring.score}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <button
+                                onClick={() => {
+                                  setEditingScoring({ ...scoring });
+                                  setShowScoringDialog(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 mr-4"
+                              >
+                                <Edit2 className="w-4 h-4 inline" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const newMap = scoringMap.filter(s => s.correctAnswer !== scoring.correctAnswer);
+                                  setScoringMap(newMap);
+                                  setHasUnsavedChanges(true);
+                                }}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="w-4 h-4 inline" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -1686,16 +1678,16 @@ export default function QuizDetailPage({ params }: PageProps) {
 
         {/* Action Buttons */}
         <div className="flex justify-between items-center mt-6 pt-6 border-t"><div>
-            {!isCreateMode && (
-              <Button
-                variant="destructive"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={deleting || saving}
-              >
-                {deleting ? 'Menghapus...' : 'Hapus Quiz'}
-              </Button>
-            )}
-          </div>
+          {!isCreateMode && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={deleting || saving}
+            >
+              {deleting ? 'Menghapus...' : 'Hapus Quiz'}
+            </Button>
+          )}
+        </div>
           <div className="flex space-x-3">
             <Button
               variant="outline"
@@ -1762,9 +1754,8 @@ export default function QuizDetailPage({ params }: PageProps) {
         <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                dialogType === 'success' ? 'bg-green-100' : 'bg-red-100'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${dialogType === 'success' ? 'bg-green-100' : 'bg-red-100'
+                }`}>
                 {dialogType === 'success' ? (
                   <CheckCircle className="w-5 h-5 text-green-600" />
                 ) : (
@@ -1778,7 +1769,7 @@ export default function QuizDetailPage({ params }: PageProps) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button 
+            <Button
               onClick={handleDialogClose}
               variant={dialogType === 'success' ? 'default' : 'destructive'}
             >
@@ -1876,9 +1867,6 @@ export default function QuizDetailPage({ params }: PageProps) {
                     if (value === 'true_false') {
                       newQuestion.options = ['true', 'false'];
                       newQuestion.correctAnswer = [];
-                    } else if (value === 'essay') {
-                      newQuestion.options = [];
-                      newQuestion.correctAnswer = [];
                     } else if (editingQuestion.questionType !== 'multiple_choice') {
                       newQuestion.options = ['', '', '', ''];
                       newQuestion.correctAnswer = [];
@@ -1892,7 +1880,6 @@ export default function QuizDetailPage({ params }: PageProps) {
                   <SelectContent>
                     <SelectItem value="multiple_choice">Pilihan Ganda</SelectItem>
                     <SelectItem value="true_false">Benar/Salah</SelectItem>
-                    <SelectItem value="essay">Essay</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -2005,15 +1992,15 @@ export default function QuizDetailPage({ params }: PageProps) {
 
       {/* Scoring Dialog */}
       <Dialog open={showScoringDialog} onOpenChange={setShowScoringDialog}>
-        <DialogContent 
+        <DialogContent
           className="max-w-md"
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <DialogHeader>
             <DialogTitle>
-              {editingScoring && scoringMap.find(s => s.correctAnswer === editingScoring.correctAnswer) 
-                ? 'Edit Scoring' 
+              {editingScoring && scoringMap.find(s => s.correctAnswer === editingScoring.correctAnswer)
+                ? 'Edit Scoring'
                 : 'Tambah Scoring'}
             </DialogTitle>
           </DialogHeader>
@@ -2059,8 +2046,8 @@ export default function QuizDetailPage({ params }: PageProps) {
           )}
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setShowScoringDialog(false);
                 setEditingScoring(null);
@@ -2081,7 +2068,7 @@ export default function QuizDetailPage({ params }: PageProps) {
           <DialogHeader>
             <DialogTitle>Copy Quiz sebagai Template</DialogTitle>
             <DialogDescription>
-              Buat quiz baru dengan meng-copy semua pertanyaan, scoring, dan pengaturan dari quiz ini. 
+              Buat quiz baru dengan meng-copy semua pertanyaan, scoring, dan pengaturan dari quiz ini.
               Quiz baru akan dibuat dengan status tidak aktif.
             </DialogDescription>
           </DialogHeader>
