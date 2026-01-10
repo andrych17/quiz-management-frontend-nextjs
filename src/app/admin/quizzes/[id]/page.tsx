@@ -18,18 +18,29 @@ import {
 } from "@/components/ui/dialog";
 import { CheckCircle, XCircle, Plus, Trash2, Edit2, GripVertical, ChevronUp, ChevronDown, Image as ImageIcon, Copy } from "lucide-react";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
+import { ImagePreview } from "@/components/admin/ImagePreview";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-type QuestionType = 'multiple_choice' | 'true_false' | 'essay';
+type QuestionType = 'multiple_choice' | 'true_false';
 
 interface Question {
   id?: number;
   questionText: string;
   questionType: QuestionType;
-  imageUrl?: string;
+  imageUrl?: string;  // Legacy field, keeping for backward compatibility
+  imageBase64?: string;  // For new image uploads
+  imageOriginalName?: string;  // Original filename
+  imageAltText?: string;  // Alt text for accessibility  
+  images?: Array<{  // Images from backend
+    id: number;
+    filePath: string;
+    originalName: string;
+    altText?: string;
+  }>;
   options: string[];
   correctAnswer: string[];
   points: number;
@@ -80,8 +91,9 @@ export default function QuizDetailPage({ params }: PageProps) {
   const [editingScoring, setEditingScoring] = useState<{ correctAnswer: number, score: number } | null>(null);
   const [scoringType, setScoringType] = useState<'linear' | 'iq-conversion'>('iq-conversion');
 
-  // Quiz token/link state
-  const [quizToken, setQuizToken] = useState<string>('');
+  // Quiz URL state
+  const [shortUrl, setShortUrl] = useState<string>('');
+  const [normalUrl, setNormalUrl] = useState<string>('');
 
   // Metadata state
   const [metadata, setMetadata] = useState<{
@@ -226,9 +238,9 @@ export default function QuizDetailPage({ params }: PageProps) {
           isPublished: quizData.isPublished === true, // Explicitly check for true
         });
 
-        // Set quiz token for link generation
-        // Use shortUrl if available, otherwise use normalUrl or token
-        setQuizToken(quizData.shortUrl || quizData.normalUrl || quizData.token || quizData.id?.toString() || '');
+        // Set quiz URLs for link display
+        setShortUrl(quizData.shortUrl || '');
+        setNormalUrl(quizData.normalUrl || '');
 
         // Set metadata
         setMetadata({
@@ -258,6 +270,7 @@ export default function QuizDetailPage({ params }: PageProps) {
             questionText: q.questionText || '',
             questionType: frontendQuestionType as QuestionType,
             imageUrl: q.imageUrl || '',
+            images: q.images || [],  // Include images from backend
             options: q.options || [],
             correctAnswer: correctAnswerArray,
             points: q.points || 1,
@@ -275,6 +288,23 @@ export default function QuizDetailPage({ params }: PageProps) {
           score: (s.correctAnswers || 0) * (s.points || 1)  // Calculate actual score: correctAnswers × points
         }));
         setScoringMap(scoreMap);
+
+        // Detect scoring type based on loaded data
+        // IQ template has 36 entries (0-35) with specific score values
+        if (scoreMap.length === 36) {
+          const maxCorrectAnswer = Math.max(...scoreMap.map((s: { correctAnswer: number }) => s.correctAnswer));
+          if (maxCorrectAnswer === 35) {
+            // Check if it matches IQ conversion pattern (score 73-139 range)
+            const hasIQPattern = scoreMap.some((s: { correctAnswer: number, score: number }) => 
+              s.score >= 73 && s.score <= 139
+            );
+            setScoringType(hasIQPattern ? 'iq-conversion' : 'linear');
+          } else {
+            setScoringType('linear');
+          }
+        } else {
+          setScoringType('linear');
+        }
       }
 
     } catch (err: any) {
@@ -310,7 +340,7 @@ export default function QuizDetailPage({ params }: PageProps) {
         const maxCorrectAnswer = Math.max(...scoringMap.map(s => s.correctAnswer));
         const minCorrectAnswer = Math.min(...scoringMap.map(s => s.correctAnswer));
 
-        // Check if scoring covers 0 to totalQuestions
+        // Check if scoring covers starting from 0
         if (minCorrectAnswer !== 0) {
           setDialogType('error');
           setDialogMessage(`❌ Template scoring tidak lengkap!\n\nHarus ada template untuk 0 jawaban benar (saat ini dimulai dari ${minCorrectAnswer}).\n\nSilakan generate ulang scoring template atau tambahkan manual.`);
@@ -318,30 +348,61 @@ export default function QuizDetailPage({ params }: PageProps) {
           return;
         }
 
-        if (maxCorrectAnswer !== totalQuestions) {
-          setDialogType('error');
-          setDialogMessage(`❌ Template scoring tidak sesuai jumlah soal!\n\nQuiz memiliki ${totalQuestions} soal, tapi scoring template maksimal untuk ${maxCorrectAnswer} jawaban benar.\n\nSilakan generate ulang scoring template yang sesuai.`);
-          setShowDialog(true);
-          return;
-        }
-
-        // Check if all numbers from 0 to totalQuestions are covered
-        const missingNumbers: number[] = [];
-        for (let i = 0; i <= totalQuestions; i++) {
-          if (!scoringMap.find(s => s.correctAnswer === i)) {
-            missingNumbers.push(i);
+        // For IQ conversion template (fixed 0-35 range), only check if it covers up to totalQuestions
+        // For linear template, require exact match with totalQuestions
+        if (scoringType === 'iq-conversion') {
+          // IQ template is fixed at 0-35, so just check if it covers the quiz's question count
+          if (maxCorrectAnswer < totalQuestions) {
+            setDialogType('error');
+            setDialogMessage(`❌ Template scoring IQ tidak mencakup semua soal!\n\nQuiz memiliki ${totalQuestions} soal, tapi scoring template hanya sampai ${maxCorrectAnswer} jawaban benar.\n\nTemplate IQ standar hanya mendukung maksimal 35 soal.`);
+            setShowDialog(true);
+            return;
           }
-        }
+          // For IQ template, only check coverage up to totalQuestions (not the full 35)
+          const missingNumbers: number[] = [];
+          for (let i = 0; i <= totalQuestions; i++) {
+            if (!scoringMap.find(s => s.correctAnswer === i)) {
+              missingNumbers.push(i);
+            }
+          }
 
-        if (missingNumbers.length > 0) {
-          const missingStr = missingNumbers.length > 5
-            ? `${missingNumbers.slice(0, 5).join(', ')}... (${missingNumbers.length} lainnya)`
-            : missingNumbers.join(', ');
+          if (missingNumbers.length > 0) {
+            const missingStr = missingNumbers.length > 5
+              ? `${missingNumbers.slice(0, 5).join(', ')}... (${missingNumbers.length} lainnya)`
+              : missingNumbers.join(', ');
 
-          setDialogType('error');
-          setDialogMessage(`❌ Template scoring tidak lengkap!\n\nQuiz memiliki ${totalQuestions} soal. Belum ada template untuk: ${missingStr} jawaban benar.\n\nHarus ada template untuk 0 sampai ${totalQuestions} jawaban benar.\n\nSilakan generate ulang scoring template.`);
-          setShowDialog(true);
-          return;
+            setDialogType('error');
+            setDialogMessage(`❌ Template scoring tidak lengkap!\n\nQuiz memiliki ${totalQuestions} soal. Belum ada template untuk: ${missingStr} jawaban benar.\n\nSilakan generate ulang scoring template.`);
+            setShowDialog(true);
+            return;
+          }
+        } else {
+          // For linear scoring, require exact match
+          if (maxCorrectAnswer !== totalQuestions) {
+            setDialogType('error');
+            setDialogMessage(`❌ Template scoring tidak sesuai jumlah soal!\n\nQuiz memiliki ${totalQuestions} soal, tapi scoring template maksimal untuk ${maxCorrectAnswer} jawaban benar.\n\nSilakan generate ulang scoring template yang sesuai.`);
+            setShowDialog(true);
+            return;
+          }
+
+          // Check if all numbers from 0 to totalQuestions are covered
+          const missingNumbers: number[] = [];
+          for (let i = 0; i <= totalQuestions; i++) {
+            if (!scoringMap.find(s => s.correctAnswer === i)) {
+              missingNumbers.push(i);
+            }
+          }
+
+          if (missingNumbers.length > 0) {
+            const missingStr = missingNumbers.length > 5
+              ? `${missingNumbers.slice(0, 5).join(', ')}... (${missingNumbers.length} lainnya)`
+              : missingNumbers.join(', ');
+
+            setDialogType('error');
+            setDialogMessage(`❌ Template scoring tidak lengkap!\n\nQuiz memiliki ${totalQuestions} soal. Belum ada template untuk: ${missingStr} jawaban benar.\n\nHarus ada template untuk 0 sampai ${totalQuestions} jawaban benar.\n\nSilakan generate ulang scoring template.`);
+            setShowDialog(true);
+            return;
+          }
         }
       }
 
@@ -404,10 +465,7 @@ export default function QuizDetailPage({ params }: PageProps) {
           };
 
           // Add correctAnswer based on question type
-          if (q.questionType === 'essay') {
-            // For essay questions, always set empty string
-            questionData.correctAnswer = '';
-          } else if (q.questionType === 'multiple_choice') {
+          if (q.questionType === 'multiple_choice') {
             // For multiple choice, convert indices back to actual option values
             if (Array.isArray(q.correctAnswer)) {
               const validAnswers = q.correctAnswer
@@ -444,6 +502,13 @@ export default function QuizDetailPage({ params }: PageProps) {
             } else {
               questionData.correctAnswer = '';
             }
+          }
+
+          // Add image data if present (new upload)
+          if (q.imageBase64) {
+            questionData.imageBase64 = q.imageBase64;
+            questionData.imageOriginalName = q.imageOriginalName || 'image.jpg';
+            questionData.imageAltText = q.imageAltText || '';
           }
 
           return questionData;
@@ -577,10 +642,7 @@ export default function QuizDetailPage({ params }: PageProps) {
           };
 
           // Add correctAnswer based on question type
-          if (q.questionType === 'essay') {
-            // For essay questions, always set empty string
-            questionData.correctAnswer = '';
-          } else if (q.questionType === 'multiple_choice') {
+          if (q.questionType === 'multiple_choice') {
             // For multiple choice, convert indices back to actual option values
             const answerValue: any = q.correctAnswer;
             const options = questionData.options || [];
@@ -761,7 +823,7 @@ export default function QuizDetailPage({ params }: PageProps) {
     }
 
     // Essay questions don't need correct answers
-    if (editingQuestion.questionType !== 'essay' && editingQuestion.correctAnswer.length === 0) {
+    if (editingQuestion.correctAnswer.length === 0) {
       setQuestionError('Pilih minimal satu jawaban yang benar');
       return;
     }
@@ -840,11 +902,7 @@ export default function QuizDetailPage({ params }: PageProps) {
     if (!editingQuestion) return;
 
     // Don't allow selecting empty options
-    if (!option || option.trim() === '') {
-      return;
-    }
-
-    // For multiple choice, use index to avoid duplicate value issues
+    // For multiple choice, ALWAYS use index to avoid duplicate value issues
     // For true/false, use the actual value
     const identifier = editingQuestion.questionType === 'multiple_choice' && optionIndex !== undefined
       ? optionIndex.toString()
@@ -926,11 +984,6 @@ export default function QuizDetailPage({ params }: PageProps) {
     setScoringMap(linearScoring);
     setScoringType('linear');
     setHasUnsavedChanges(true);
-
-    const exampleMid = Math.floor(totalQuestions / 2);
-    const exampleMidScore = Math.round((exampleMid / totalQuestions) * 100);
-
-    alert(`✅ Skor Linear berhasil di-generate!\n\n${totalQuestions + 1} mapping (0-${totalQuestions} jawaban benar) telah dibuat.\nFormula: (Benar ÷ ${totalQuestions}) × 100\n\nContoh:\n• 0 benar = 0 poin\n• ${exampleMid} benar = ${exampleMidScore} poin\n• ${totalQuestions} benar = 100 poin\n\nJangan lupa SAVE untuk menyimpan perubahan.`);
   };
 
   const handleGenerateIQConversionScoring = () => {
@@ -967,7 +1020,6 @@ export default function QuizDetailPage({ params }: PageProps) {
     setScoringMap(iqConversionScoring);
     setScoringType('iq-conversion');
     setHasUnsavedChanges(true);
-    alert('✅ Skor Konversi IQ berhasil di-generate!\n\n36 mapping (0-35 jawaban benar) telah dibuat.\nBerdasarkan tabel konversi standar IQ\nRange score: 73-139\n\nJangan lupa SAVE untuk menyimpan perubahan.');
   };
 
   if (!quizId || loading) {
@@ -1004,21 +1056,46 @@ export default function QuizDetailPage({ params }: PageProps) {
 
           {!isCreateMode && (
             <div className="flex flex-col gap-3">
-              {/* Display generated link if exists */}
-              {quizToken && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              {/* Display Short URL if exists */}
+              {shortUrl && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-blue-600 font-medium mb-1">Quiz Link:</p>
-                      <p className="text-sm text-blue-900 font-mono truncate">{quizToken}</p>
+                      <p className="text-xs text-green-600 font-medium mb-1">Short URL:</p>
+                      <p className="text-sm text-green-900 font-mono truncate">{shortUrl}</p>
                     </div>
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => {
-                        navigator.clipboard.writeText(quizToken);
+                        navigator.clipboard.writeText(shortUrl);
                         setDialogType('success');
-                        setDialogMessage('Link copied to clipboard!');
+                        setDialogMessage('Short URL copied to clipboard!');
+                        setShowDialog(true);
+                      }}
+                      className="text-green-600 hover:text-green-800 hover:bg-green-100 flex-shrink-0"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Display Normal URL if exists */}
+              {normalUrl && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-blue-600 font-medium mb-1">Normal URL:</p>
+                      <p className="text-sm text-blue-900 font-mono truncate">{normalUrl}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        navigator.clipboard.writeText(normalUrl);
+                        setDialogType('success');
+                        setDialogMessage('Normal URL copied to clipboard!');
                         setShowDialog(true);
                       }}
                       className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 flex-shrink-0"
@@ -1039,17 +1116,15 @@ export default function QuizDetailPage({ params }: PageProps) {
                     try {
                       const result = await API.quizzes.generateQuizLink(Number(quizId));
                       if (result.success && result.data) {
-                        const quizUrl = result.data.shortUrl || result.data.normalUrl;
-
                         // Update local state with new URLs (don't change published status)
-                        setQuizToken(quizUrl);
+                        setShortUrl(result.data.shortUrl || '');
+                        setNormalUrl(result.data.normalUrl || '');
 
-                        setDialogType('success');
-                        setDialogMessage(`Quiz link ${quizToken ? 'regenerated' : 'generated'} successfully and copied to clipboard!`);
-                        setShowDialog(true);
-
-                        // Also copy to clipboard
-                        navigator.clipboard.writeText(quizUrl);
+                        // Copy short URL to clipboard if available, otherwise normal URL
+                        const urlToCopy = result.data.shortUrl || result.data.normalUrl || '';
+                        if (urlToCopy) {
+                          navigator.clipboard.writeText(urlToCopy);
+                        }
                       } else {
                         setDialogType('error');
                         setDialogMessage(result.message || 'Failed to generate quiz link');
@@ -1065,7 +1140,7 @@ export default function QuizDetailPage({ params }: PageProps) {
                   className="border-blue-600 text-blue-700 hover:bg-blue-50"
                 >
                   <Copy className="w-4 h-4 mr-2" />
-                  {quizToken ? 'Regenerate Link' : 'Generate Link'}
+                  {(shortUrl || normalUrl) ? 'Regenerate Link' : 'Generate Link'}
                 </Button>
 
                 {/* Publish/Unpublish button */}
@@ -1085,10 +1160,10 @@ export default function QuizDetailPage({ params }: PageProps) {
                       if (result.success) {
                         setFormData({ ...formData, isPublished: !isCurrentlyPublished });
 
-                        // Update token if published
+                        // Update URLs if published
                         if (result.data?.shortUrl || result.data?.normalUrl) {
-                          const newToken = result.data.shortUrl || result.data.normalUrl || '';
-                          setQuizToken(newToken);
+                          setShortUrl(result.data.shortUrl || '');
+                          setNormalUrl(result.data.normalUrl || '');
                         }
 
                         setDialogType('success');
@@ -1263,31 +1338,16 @@ export default function QuizDetailPage({ params }: PageProps) {
               </div>
 
               <div>
-                <Label htmlFor="passingScore">Nilai Lulus (%)</Label>
+                <Label htmlFor="passingScore">Nilai Lulus (Point)</Label>
                 <Input
                   id="passingScore"
                   type="number"
                   value={formData.passingScore}
                   onChange={(e) => {
-                    setFormData({ ...formData, passingScore: parseInt(e.target.value) || 60 });
+                    setFormData({ ...formData, passingScore: parseInt(e.target.value) || 0 });
                     setHasUnsavedChanges(true);
                   }}
                   min="0"
-                  max="100"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="questionsPerPage">Pertanyaan Per Halaman</Label>
-                <Input
-                  id="questionsPerPage"
-                  type="number"
-                  value={formData.questionsPerPage}
-                  onChange={(e) => {
-                    setFormData({ ...formData, questionsPerPage: parseInt(e.target.value) || 10 });
-                    setHasUnsavedChanges(true);
-                  }}
-                  min="1"
                 />
               </div>
             </div>
@@ -1343,8 +1403,7 @@ export default function QuizDetailPage({ params }: PageProps) {
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-semibold text-sm">#{index + 1}</span>
                               <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                                {question.questionType === 'multiple_choice' ? 'Pilihan Ganda' :
-                                  question.questionType === 'true_false' ? 'Benar/Salah' : 'Essay'}
+                                {question.questionType === 'multiple_choice' ? 'Pilihan Ganda' : 'Benar/Salah'}
                               </span>
                             </div>
                             <p className="text-sm font-medium">{question.questionText}</p>
@@ -1384,7 +1443,7 @@ export default function QuizDetailPage({ params }: PageProps) {
                         {question.questionType === 'multiple_choice' && question.options.length > 0 && (
                           <div className="mt-2 space-y-1">
                             {question.options.map((option, optIndex) => {
-                              const isCorrect = question.correctAnswer.includes(optIndex.toString()) || question.correctAnswer.includes(option);
+                              const isCorrect = question.correctAnswer.includes(optIndex.toString());
                               return (
                                 <div key={optIndex} className="flex items-center gap-2 text-sm">
                                   <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${isCorrect
@@ -1815,47 +1874,61 @@ export default function QuizDetailPage({ params }: PageProps) {
               </div>
 
               <div>
-                {/* <Label htmlFor="imageUrl">
-                  URL Gambar (Opsional)
+                <Label>
+                  Gambar Pertanyaan (Opsional)
                 </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="imageUrl"
-                    type="url"
-                    value={editingQuestion.imageUrl || ''}
-                    onChange={(e) => setEditingQuestion({ ...editingQuestion, imageUrl: e.target.value })}
-                    placeholder="https://example.com/image.jpg"
+                <p className="text-xs text-gray-500 mb-3">
+                  Upload gambar untuk memperjelas pertanyaan. Max 5MB (PNG, JPG, GIF, WebP)
+                </p>
+
+                {/* Show existing image from backend if available */}
+                {editingQuestion.images && editingQuestion.images.length > 0 && !editingQuestion.imageBase64 ? (
+                  <ImagePreview
+                    imageUrl={editingQuestion.images[0].filePath}
+                    altText={editingQuestion.imageAltText || editingQuestion.images[0].altText}
+                    onRemove={() => {
+                      setEditingQuestion({ 
+                        ...editingQuestion, 
+                        images: [],
+                        imageAltText: '' 
+                      });
+                    }}
+                    onAltTextChange={(altText) => {
+                      setEditingQuestion({ ...editingQuestion, imageAltText: altText });
+                    }}
                   />
-                  {editingQuestion.imageUrl && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => window.open(editingQuestion.imageUrl, '_blank')}
-                      title="Preview gambar"
-                    >
-                      <ImageIcon className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div> */}
-                {/* TODO: Image functionality - currently disabled
-                {editingQuestion.imageUrl && (
-                  <div className="mt-2 border rounded-lg p-2 bg-gray-50">
-                    <img 
-                      src={editingQuestion.imageUrl} 
-                      alt="Preview" 
-                      className="max-w-full h-auto max-h-48 mx-auto rounded"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.nextElementSibling!.classList.remove('hidden');
-                      }}
-                    />
-                    <p className="text-sm text-red-500 text-center mt-2 hidden">
-                      Gagal memuat gambar. Periksa URL gambar.
-                    </p>
-                  </div>
+                ) : editingQuestion.imageBase64 ? (
+                  /* Show preview of newly uploaded image */
+                  <ImagePreview
+                    imageUrl={editingQuestion.imageBase64}
+                    altText={editingQuestion.imageAltText}
+                    onRemove={() => {
+                      setEditingQuestion({ 
+                        ...editingQuestion, 
+                        imageBase64: undefined,
+                        imageOriginalName: undefined,
+                        imageAltText: ''
+                      });
+                    }}
+                    onAltTextChange={(altText) => {
+                      setEditingQuestion({ ...editingQuestion, imageAltText: altText });
+                    }}
+                  />
+                ) : (
+                  /* Show upload field if no image */
+                  <ImageUploadField
+                    onImageSelect={(base64, filename) => {
+                      setEditingQuestion({
+                        ...editingQuestion,
+                        imageBase64: base64,
+                        imageOriginalName: filename
+                      });
+                    }}
+                    onError={(error) => {
+                      setQuestionError(error);
+                    }}
+                  />
                 )}
-                */}
               </div>
 
               <div>
@@ -1905,8 +1978,8 @@ export default function QuizDetailPage({ params }: PageProps) {
                         <div key={index} className="flex gap-2 items-center">
                           <input
                             type="checkbox"
-                            checked={editingQuestion.correctAnswer.includes(option)}
-                            onChange={() => toggleCorrectAnswer(option)}
+                            checked={editingQuestion.correctAnswer.includes(index.toString())}
+                            onChange={() => toggleCorrectAnswer(option, index)}
                             disabled={isOptionEmpty}
                             className={`w-4 h-4 ${isOptionEmpty ? 'opacity-50 cursor-not-allowed' : 'text-green-600 cursor-pointer'}`}
                             title={isOptionEmpty ? 'Isi jawaban terlebih dahulu' : 'Centang jika jawaban benar'}
@@ -1969,13 +2042,7 @@ export default function QuizDetailPage({ params }: PageProps) {
                 </div>
               )}
 
-              {editingQuestion.questionType === 'essay' && (
-                <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                  <p className="text-sm text-blue-800">
-                    <strong>Info:</strong> Pertanyaan essay akan dinilai secara manual oleh admin.
-                  </p>
-                </div>
-              )}
+
             </div>
           )}
 

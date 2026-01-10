@@ -13,7 +13,7 @@ export type Question = {
   id: string;
   order: number;
   questionText: string;
-  questionType: 'multiple-choice' | 'multiple-select' | 'text'; // Support multiple types
+  questionType: 'multiple-choice' | 'multiple-select'; // Support multiple types
   options?: string[]; // For multiple choice questions
   correctAnswer: string; // For multiple choice: option text, for multiple-select: comma-separated option texts
 };

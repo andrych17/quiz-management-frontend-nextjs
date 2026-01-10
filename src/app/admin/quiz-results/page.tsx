@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/lib/api-client';
 import DataTable, { Column, DataTableAction } from '@/components/ui/table/DataTable';
 import BasePageLayout from '@/components/ui/layout/BasePageLayout';
-import { Modal } from '@/components/ui/common/Modal';
+
 import { Button } from '@/components/ui/button';
 import TableFilterBar from '@/components/ui/table/TableFilterBar';
 import type { FilterOption, TableFilters, SortConfig } from '@/components/ui/table/TableFilterBar';
+import { logger } from '@/lib/logger';
 
 interface QuizResult {
   id: number;
@@ -19,21 +21,23 @@ interface QuizResult {
   serviceName: string;
   locationName: string;
   score: number;
-  grade?: string;
   passed: boolean;
   startedAt: string;
   completedAt?: string;
   submittedAt?: string;
-  totalAnswers: number;
+  totalQuestions: number;
   correctAnswers: number;
+  quizId: number;
 }
 
 export default function QuizResultsPage() {
   const router = useRouter();
+  const { isSuperadmin } = useAuth();
   const searchParams = useSearchParams();
   const [results, setResults] = useState<QuizResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -121,8 +125,8 @@ export default function QuizResultsPage() {
       if (currentFilters.locationKey && currentFilters.locationKey !== 'all_locations') {
         apiParams.locationKey = currentFilters.locationKey;
       }
-      if (currentFilters.quizId) {
-        apiParams.quizId = currentFilters.quizId;
+      if (currentFilters.quizName) {
+        apiParams.quizName = currentFilters.quizName;
       }
       if (currentFilters.startDate) {
         apiParams.startDate = currentFilters.startDate;
@@ -188,10 +192,10 @@ export default function QuizResultsPage() {
       serviceFilter,
       locationFilter,
       {
-        key: 'quizId',
-        label: 'Quiz ID',
-        type: 'number',
-        placeholder: 'Enter Quiz ID'
+        key: 'quizName',
+        label: 'Quiz Name',
+        type: 'text',
+        placeholder: 'Enter Quiz Name'
       },
       {
         key: 'startDate',
@@ -225,7 +229,96 @@ export default function QuizResultsPage() {
     loadResults({}, sortConfig, 1);
   }, [loadResults, sortConfig]);
 
+  const handleExportExcel = async () => {
+    if (results.length === 0) {
+      setError('No data to export');
+      return;
+    }
 
+    setIsExporting(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('admin_token');
+      if (!token) {
+        setError('Authentication token not found. Please login again.');
+        return;
+      }
+
+      // Build query params from current filters
+      const queryParams = new URLSearchParams();
+      // Changed: Filter by Quiz Name instead of ID
+      if (filterValues.quizName) {
+        queryParams.append('quizName', String(filterValues.quizName));
+      }
+      if (filterValues.serviceKey && filterValues.serviceKey !== 'all_services') {
+        queryParams.append('serviceKey', String(filterValues.serviceKey));
+      }
+      if (filterValues.locationKey && filterValues.locationKey !== 'all_locations') {
+        queryParams.append('locationKey', String(filterValues.locationKey));
+      }
+
+      const queryString = queryParams.toString();
+      const endpoint = `/api/attempts/export-excel${queryString ? `?${queryString}` : ''}`;
+      
+      logger.api('GET', endpoint);
+
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      logger.apiResponse(endpoint, response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to export quiz results');
+      }
+
+      // Download the Excel file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quiz-results-${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      logger.debug('Excel export successful');
+    } catch (err: any) {
+      logger.error('Error exporting quiz results:', err);
+      setError(err.message || 'Failed to export quiz results to Excel');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteClick = async (result: QuizResult) => {
+    if (!window.confirm(`Are you sure you want to delete the attempt for ${result.participantName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await API.attempts.deleteAttempt(result.id);
+      
+      // Refresh results
+      await loadResults(filterValues, sortConfig, page);
+      
+      logger.debug(`Deleted attempt ${result.id}`);
+    } catch (err: any) {
+      console.error('Error deleting attempt:', err);
+      setError(err.message || 'Failed to delete attempt');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const columns: Column[] = [
     {
@@ -261,17 +354,14 @@ export default function QuizResultsPage() {
           <div className={`text-lg font-semibold ${
             row.passed ? 'text-green-600' : 'text-red-600'
           }`}>
-            {row.score}%
+            {row.score}
           </div>
-          {row.grade && (
-            <div className="text-sm text-gray-500">{row.grade}</div>
-          )}
-          <div className={`text-xs px-2 py-1 rounded-full inline-block ${
+          <div className={`text-xs px-2 py-1 rounded-full inline-block mt-1 ${
             row.passed 
               ? 'bg-green-100 text-green-800' 
               : 'bg-red-100 text-red-800'
           }`}>
-            {row.passed ? 'PASSED' : 'FAILED'}
+            {row.passed ? '✅ LULUS' : '❌ TIDAK LULUS'}
           </div>
         </div>
       ),
@@ -289,19 +379,19 @@ export default function QuizResultsPage() {
         }
         
         const correctAnswers = row.correctAnswers || 0;
-        const totalAnswers = row.totalAnswers || 0;
+        const totalQuestions = row.totalQuestions || 0;
         
         return (
           <div className="text-center">
             <div className="text-sm">
               <span className="text-green-600 font-medium">{correctAnswers}</span>
               {' / '}
-              <span className="text-gray-600">{totalAnswers}</span>
+              <span className="text-gray-600">{totalQuestions}</span>
             </div>
             <div className="text-xs text-gray-500">
-              {totalAnswers > 0 
-                ? Math.round((correctAnswers / totalAnswers) * 100)
-                : 0}% correct
+              {totalQuestions > 0 
+                ? Math.round((correctAnswers / totalQuestions) * 100)
+                : 0}% benar
             </div>
           </div>
         );
@@ -328,7 +418,7 @@ export default function QuizResultsPage() {
 
   const actions: DataTableAction[] = [
     {
-      label: 'View Details',
+      label: 'View',
       onClick: handleView,
       icon: (
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -336,8 +426,18 @@ export default function QuizResultsPage() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
       ),
-      variant: 'primary' as const
+      variant: 'primary'
     },
+    {
+      label: 'Delete',
+      onClick: handleDeleteClick,
+      icon: (
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      ),
+      variant: 'danger'
+    }
   ];
 
   return (
@@ -348,6 +448,34 @@ export default function QuizResultsPage() {
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-700">{error}</p>
+        </div>
+      )}
+
+      {/* Export Excel Button - Superadmin Only */}
+      {isSuperadmin && results.length > 0 && (
+        <div className="mb-4 flex justify-end">
+          <Button
+            onClick={handleExportExcel}
+            disabled={isExporting || loading}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {isExporting ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export to Excel
+              </>
+            )}
+          </Button>
         </div>
       )}
 
@@ -378,6 +506,8 @@ export default function QuizResultsPage() {
           }
         }}
       />
+
+
     </BasePageLayout>
   );
 }

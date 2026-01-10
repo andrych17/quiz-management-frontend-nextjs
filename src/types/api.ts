@@ -153,6 +153,19 @@ export interface Question {
   points: number;
   order: number;
   createdAt: string;
+  images?: QuestionImage[];
+}
+
+export interface QuestionImage {
+  id: number;
+  fileName: string;
+  filePath: string;          // Backend URL to use for display
+  originalName: string;
+  mimeType: string;
+  fileSize: number;
+  altText?: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface Attempt {
@@ -276,3 +289,30 @@ export interface UpdateSessionTimeDto {
   sessionToken: string;
   timeSpentSeconds: number;
 }
+
+// Dashboard and Report types
+export interface DashboardStats {
+  activeQuizzes: number;
+  adminUsers: number;
+  todayActiveQuizzes: Array<{
+    id: number;
+    title: string;
+    attemptCount: number;
+  }>;
+  todayParticipants: number;
+}
+
+export interface RecentActivity {
+  id: number;
+  participantName: string;
+  email: string;
+  nij: string;
+  quizId: number;
+  quizTitle: string;
+  score: number;
+  passed: boolean;
+  startedAt: string;
+  completedAt: string | null;
+  submittedAt: string | null;
+}
+

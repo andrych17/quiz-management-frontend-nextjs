@@ -25,12 +25,13 @@ export default function PublicQuizPage() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [quizStartTime, setQuizStartTime] = useState<Date | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [currentPage, setCurrentPage] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [participantDataLoading, setParticipantDataLoading] = useState(false);
   const [hasSubmittedBefore, setHasSubmittedBefore] = useState(false);
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState('');
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -308,7 +309,9 @@ export default function PublicQuizPage() {
   };
 
   const handleSubmitQuiz = async (isAutoSubmit: boolean = false) => {
-    // Validate all questions are answered for manual submit
+    // Allow submission even if not all questions are answered
+    // The confirm dialog will show how many questions are unanswered
+    /* Removed strict validation - users can submit with unanswered questions
     if (!isAutoSubmit) {
       const unansweredQuestions: number[] = [];
       questions.forEach((question) => {
@@ -328,6 +331,7 @@ export default function PublicQuizPage() {
         return;
       }
     }
+    */
     
     setIsSubmitting(true);
     try {
@@ -361,15 +365,15 @@ export default function PublicQuizPage() {
           name: participantInfo.name
         }));
         
-        // Show completion message instead of redirecting
+        // Show completion page
+        const message = isAutoSubmit 
+          ? `Waktu habis! Quiz telah di-submit otomatis. ${answeredCount} dari ${questions.length} pertanyaan terjawab.`
+          : `Anda telah menyelesaikan quiz. ${answeredCount} dari ${questions.length} pertanyaan terjawab.`;
+        
+        setCompletionMessage(message);
+        setQuizCompleted(true);
         setShowQuiz(false);
         setError(null);
-        
-        const message = isAutoSubmit 
-          ? `Waktu habis! Quiz telah di-submit otomatis.\n${answeredCount} dari ${questions.length} pertanyaan terjawab.\nNIJ: ${participantInfo.nij}`
-          : `Anda telah menyelesaikan quiz.\n${answeredCount} dari ${questions.length} pertanyaan terjawab.\nNIJ: ${participantInfo.nij}`;
-        
-        alert(message);
       } else {
         setError('Gagal mengirim jawaban. Silakan coba lagi.');
       }
@@ -411,6 +415,38 @@ export default function PublicQuizPage() {
         <div className="text-center text-red-600">
           <p className="text-xl mb-4">⚠️ {error || 'Quiz not found'}</p>
           <p className="text-gray-600">Silakan hubungi administrator untuk mendapatkan link quiz yang valid.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show completion page if quiz is completed
+  if (quizCompleted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 text-center">
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Quiz Selesai!</h2>
+            <p className="text-gray-600 mb-4">{completionMessage}</p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left text-sm">
+              <p className="text-blue-900"><strong>Nama:</strong> {participantInfo.name}</p>
+              <p className="text-blue-900"><strong>NIJ:</strong> {participantInfo.nij}</p>
+              <p className="text-blue-900"><strong>Email:</strong> {participantInfo.email}</p>
+            </div>
+          </div>
+          <div className="border-t pt-4">
+            <p className="text-sm text-gray-600">
+              ✅ Jawaban Anda telah berhasil dikirim.
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              Hasil quiz akan diumumkan kemudian. Terima kasih atas partisipasi Anda.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -561,11 +597,7 @@ export default function PublicQuizPage() {
     );
   }
 
-  // Pagination logic
-  const questionsPerPage = quiz?.questionsPerPage || 5;
-  const totalPages = Math.ceil(questions.length / questionsPerPage);
-  const startIndex = currentPage * questionsPerPage;
-  const currentPageQuestions = questions.slice(startIndex, startIndex + questionsPerPage);
+  // Show all questions at once (no pagination)
   const answeredCount = Object.keys(currentAnswers).filter(key => {
     const answer = currentAnswers[parseInt(key)];
     if (Array.isArray(answer)) {
@@ -622,8 +654,8 @@ export default function PublicQuizPage() {
       {/* Questions Content */}
       <div className="max-w-4xl mx-auto p-3 sm:p-6">
         <div className="space-y-4 sm:space-y-6">
-          {currentPageQuestions.map((question, pageIndex) => {
-            const questionNumber = startIndex + pageIndex + 1;
+          {questions.map((question, index) => {
+            const questionNumber = index + 1;
             const questionAnswer = currentAnswers[question.id];
             
             return (
@@ -639,17 +671,17 @@ export default function PublicQuizPage() {
                     {(question as any).questionText || (question as any).question || (question as any).text || 'Question text'}
                   </p>
 
-                  {/* TODO: Image functionality - currently disabled
-                  {(question as any).imageUrl && (
-                    <div className="mt-4">
+                  {/* Question Image */}
+                  {(question as any).images && (question as any).images.length > 0 && (
+                    <div className="mt-4 mb-4">
                       <img 
-                        src={(question as any).imageUrl} 
-                        alt="Question image"
-                        className="max-w-full h-auto rounded-lg"
+                        src={(question as any).images[0].filePath} 
+                        alt={(question as any).images[0].altText || "Question image"}
+                        className="max-w-full h-auto rounded-lg shadow-md"
+                        loading="lazy"
                       />
                     </div>
                   )}
-                  */}
                 </div>
 
                 {/* Answer Options */}
@@ -718,62 +750,23 @@ export default function PublicQuizPage() {
                     </div>
                   )}
 
-                  {(question as any).questionType === 'text' && (
-                    <div>
-                      <textarea
-                        value={questionAnswer || ''}
-                        onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                        className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        rows={4}
-                        placeholder="Type your answer here..."
-                      />
-                    </div>
-                  )}
+
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Navigation */}
-        <div className={`flex flex-col sm:flex-row sm:justify-between items-stretch sm:items-center gap-3 sm:gap-4 mt-4 sm:mt-6 ${
+        {/* Submit Button */}
+        <div className={`flex justify-center mt-6 sm:mt-8 ${
           timeLeft !== null && timeLeft <= 60 ? 'mb-24' : ''
         }`}>
           <button
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage === 0}
-            className="px-3 sm:px-4 py-2 text-sm sm:text-base text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed order-1"
+            onClick={() => setShowConfirmSubmit(true)}
+            className="px-8 py-3 text-base sm:text-lg bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium shadow-lg"
           >
-            <span className="hidden sm:inline">← Previous Page</span>
-            <span className="sm:hidden">← Prev</span>
+            Submit Quiz
           </button>
-
-          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 order-3 sm:order-2">
-            <span className="text-xs sm:text-sm text-gray-600 text-center">
-              <span className="hidden sm:inline">Page {currentPage + 1} of {totalPages} ({questions.length} questions)</span>
-              <span className="sm:hidden">Page {currentPage + 1}/{totalPages}</span>
-            </span>
-            
-            {currentPage < totalPages - 1 && (
-              <button
-                onClick={() => setCurrentPage(currentPage + 1)}
-                className="w-full sm:w-auto px-3 sm:px-4 py-2 text-sm sm:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <span className="hidden sm:inline">Next Page →</span>
-                <span className="sm:hidden">Next →</span>
-              </button>
-            )}
-          </div>
-
-          <div className="flex gap-2 sm:gap-3 order-2 sm:order-3">
-            <button
-              onClick={() => setShowConfirmSubmit(true)}
-              className="flex-1 sm:flex-none px-4 sm:px-6 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              <span className="hidden sm:inline">Submit Quiz</span>
-              <span className="sm:hidden">Submit</span>
-            </button>
-          </div>
         </div>
       </div>
 
@@ -782,8 +775,8 @@ export default function PublicQuizPage() {
 
       {/* Confirm Submit Modal */}
       {showConfirmSubmit && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-3">
+          <div className="bg-white rounded-lg shadow-2xl border-2 border-gray-300 p-4 sm:p-6 max-w-md w-full">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Confirm Submission</h2>
             <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">
               Are you sure you want to submit your quiz? You have answered {answeredCount} out of {questions.length} questions.
