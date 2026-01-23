@@ -675,9 +675,10 @@ export default function PublicQuizPage() {
                   {(question as any).images && (question as any).images.length > 0 && (
                     <div className="mt-4 mb-4">
                       <img 
-                        src={(question as any).images[0].filePath} 
+                        src={(question as any).images[0].downloadUrl} 
                         alt={(question as any).images[0].altText || "Question image"}
-                        className="max-w-full h-auto rounded-lg shadow-md"
+                        className="rounded-lg shadow-md"
+                        style={{ width: '200px', height: '150px', objectFit: 'cover' }}
                         loading="lazy"
                       />
                     </div>

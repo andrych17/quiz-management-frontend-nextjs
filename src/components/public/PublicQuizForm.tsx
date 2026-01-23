@@ -424,6 +424,21 @@ export default function PublicQuizForm({ quiz }: PublicQuizFormProps) {
                 </span>
               )}
             </h3>
+
+            {/* Display image if available */}
+            {q.images && q.images.length > 0 && (
+              <div className="mb-4">
+                <img 
+                  src={q.images[0].downloadUrl} 
+                  alt={q.images[0].altText || 'Question image'} 
+                  className="rounded-lg border border-gray-300"
+                  style={{ width: '200px', height: '150px', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
             
             {q.questionType === 'multiple-choice' && q.options ? (
               <div className="space-y-3">

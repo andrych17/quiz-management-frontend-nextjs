@@ -29,7 +29,8 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
         <img
           src={imageUrl}
           alt={altText || 'Preview'}
-          className="max-w-full h-auto max-h-64 rounded-lg border border-gray-200 shadow-sm"
+          className="rounded-lg border border-gray-200 shadow-sm"
+          style={{ width: '300px', height: '225px', objectFit: 'cover' }}
         />
         
         {/* Remove Button */}
