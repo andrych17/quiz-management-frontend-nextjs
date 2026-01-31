@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { publicSubmitSchema, participantInfoSchema } from "@/../lib/schemas";
+import { publicSubmitSchema } from "@/lib/schemas";
 import { Quiz } from "@/types";
 import { useQuizSession, useQuizTimer, useAutoSave, useSessionPersistence } from "@/hooks/useQuizSession";
 import QuizTimer, { TimeWarning } from "@/components/ui/QuizTimer";
 import { AlertTriangle, Clock, Save, RefreshCw } from "lucide-react";
+import { getAbsoluteImageUrl } from "@/lib/constants/api";
 
 interface PublicQuizFormProps {
   quiz: Quiz;
@@ -20,7 +21,7 @@ export default function PublicQuizForm({ quiz }: PublicQuizFormProps) {
   const [selectedAnswers, setSelectedAnswers] = useState<{[key: string]: string}>({});
   const [multiSelectAnswers, setMultiSelectAnswers] = useState<{[key: string]: string[]}>({});
   const [currentPage, setCurrentPage] = useState(0);
-  const [participantInfo, setParticipantInfo] = useState({ name: "", nij: "", email: "" });
+  const [participantInfo, setParticipantInfo] = useState({ name: "", nij: "", email: "", servoNumber: "", serviceKey: "" });
   const [timeWarnings, setTimeWarnings] = useState<number[]>([]);
 
   // Session management hooks
@@ -127,12 +128,15 @@ export default function PublicQuizForm({ quiz }: PublicQuizFormProps) {
     const name = String(form.get("name") ?? "").trim();
     const nij = String(form.get("nij") ?? "").trim();
     const email = String(form.get("email") ?? "").trim();
+    const servoNumber = String(form.get("servoNumber") ?? "").trim();
     
     try {
       // Validate participant info
-      participantInfoSchema.parse({ name, nij, email: email || undefined });
+      if (!name || !nij) {
+        throw new Error("Name and NIJ are required");
+      }
       
-      setParticipantInfo({ name, nij, email });
+      setParticipantInfo({ name, nij, email, servoNumber, serviceKey: "" });
       
       // Initialize session if quiz has time limit
       if (hasTimeLimit) {
@@ -328,6 +332,23 @@ export default function PublicQuizForm({ quiz }: PublicQuizFormProps) {
             </div>
           )}
 
+          <div>
+            <label htmlFor="servoNumber" className="block text-sm font-medium text-gray-700 mb-2">
+              Servo Number
+            </label>
+            <input
+              type="text"
+              id="servoNumber"
+              name="servoNumber"
+              defaultValue={participantInfo.servoNumber}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Masukkan servo number (opsional)"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Kosongkan jika tidak ada
+            </p>
+          </div>
+
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4">
               <p className="text-sm text-red-700">{error}</p>
@@ -425,18 +446,35 @@ export default function PublicQuizForm({ quiz }: PublicQuizFormProps) {
               )}
             </h3>
 
-            {/* Display image if available */}
-            {q.images && q.images.length > 0 && (
+            {/* Display images if available */}
+            {(q as any).images && (q as any).images.length > 0 && (
               <div className="mb-4">
-                <img 
-                  src={q.images[0].downloadUrl} 
-                  alt={q.images[0].altText || 'Question image'} 
-                  className="rounded-lg border border-gray-300"
-                  style={{ width: '200px', height: '150px', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
+                <div className={`grid gap-3 ${(q as any).images.length === 1 ? 'grid-cols-1' : (q as any).images.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                  {(q as any).images
+                    .sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0))
+                    .map((image: any, imgIndex: number) => (
+                      <div key={image.id || imgIndex} className="relative">
+                        <img 
+                          src={getAbsoluteImageUrl(image.downloadUrl || image.imageUrl)} 
+                          alt={image.altText || image.imageCaption || `Question image ${imgIndex + 1}`}
+                          className="rounded-lg border border-gray-300 w-full h-auto max-h-48 object-contain bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(getAbsoluteImageUrl(image.downloadUrl || image.imageUrl), '_blank')}
+                          title="Klik untuk memperbesar"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                        {image.imageCaption && (
+                          <p className="text-xs text-gray-500 mt-1 text-center">{image.imageCaption}</p>
+                        )}
+                      </div>
+                    ))}
+                </div>
+                {(q as any).images.length > 1 && (
+                  <p className="text-xs text-gray-400 mt-2 text-center">
+                    📷 {(q as any).images.length} gambar - klik untuk memperbesar
+                  </p>
+                )}
               </div>
             )}
             

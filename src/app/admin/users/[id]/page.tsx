@@ -53,7 +53,7 @@ export default function UserDetailPage({ params }: PageProps) {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'admin' as 'admin' | 'user' | 'superadmin',
+    role: 'admin' as 'admin' | 'superadmin',
     location: '',
     service: '',
     isActive: true
@@ -155,7 +155,7 @@ export default function UserDetailPage({ params }: PageProps) {
           email: userData.email || '',
           password: '',
           confirmPassword: '',
-          role: userData.role || 'admin',
+          role: (userData.role === 'superadmin' ? 'superadmin' : 'admin') as 'admin' | 'superadmin',
           location: (typeof userData.location === 'object' && userData.location !== null) ? userData.location.key : userData.location || '',
           service: (typeof userData.service === 'object' && userData.service !== null) ? userData.service.key : userData.service || '',
           isActive: userData.isActive !== undefined ? userData.isActive : true
@@ -439,7 +439,7 @@ export default function UserDetailPage({ params }: PageProps) {
               <Select
                 value={formData.role || undefined}
                 onValueChange={(value) => {
-                  setFormData({ ...formData, role: value as 'admin' | 'user' | 'superadmin' });
+                  setFormData({ ...formData, role: value as 'admin' | 'superadmin' });
                   setHasUnsavedChanges(true);
                   clearMessages();
                 }}
@@ -449,8 +449,7 @@ export default function UserDetailPage({ params }: PageProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="superadmin">Superadmin</SelectItem>
+                  <SelectItem value="superadmin">Super Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>

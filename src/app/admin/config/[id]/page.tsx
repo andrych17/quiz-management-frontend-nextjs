@@ -37,7 +37,8 @@ export default function ConfigDetailPage({ params }: PageProps) {
     value: "",
     description: "",
     order: DEFAULT_CONFIG_ORDER,
-    isActive: DEFAULT_CONFIG_STATUS
+    isActive: DEFAULT_CONFIG_STATUS,
+    isDisplayToUser: false
   });
   const [metadata, setMetadata] = useState<{
     createdAt?: string;
@@ -85,7 +86,8 @@ export default function ConfigDetailPage({ params }: PageProps) {
               value: config.value,
               description: config.description || "",
               order: config.order || DEFAULT_CONFIG_ORDER,
-              isActive: config.isActive
+              isActive: config.isActive,
+              isDisplayToUser: config.isDisplayToUser || false
             });
             setMetadata({
               createdAt: config.createdAt,
@@ -152,7 +154,9 @@ export default function ConfigDetailPage({ params }: PageProps) {
         value: formData.value,
         description: formData.description || undefined,
         order: formData.order,
-        isActive: formData.isActive
+        isActive: formData.isActive,
+        // Only include isDisplayToUser for services group
+        ...(formData.group === 'services' ? { isDisplayToUser: formData.isDisplayToUser } : {})
       };
 
       let response;
@@ -222,7 +226,8 @@ export default function ConfigDetailPage({ params }: PageProps) {
           value: "",
           description: "",
           order: DEFAULT_CONFIG_ORDER,
-          isActive: DEFAULT_CONFIG_STATUS
+          isActive: DEFAULT_CONFIG_STATUS,
+          isDisplayToUser: false
         });
       }
       // For edit mode, just close dialog and stay on page
@@ -396,6 +401,32 @@ export default function ConfigDetailPage({ params }: PageProps) {
                     <SelectItem value="inactive">Tidak Aktif</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {/* Display to User field - only show for services group */}
+            {formData.group === 'services' && (
+              <div>
+                <Label htmlFor="isDisplayToUser">Display to User</Label>
+                <Select
+                  value={formData.isDisplayToUser ? 'yes' : 'no'}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, isDisplayToUser: value === 'yes' });
+                    setHasUnsavedChanges(true);
+                    clearMessages();
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes">Yes - Tampilkan ke peserta</SelectItem>
+                    <SelectItem value="no">No - Sembunyikan dari peserta</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Jika &quot;Yes&quot;, service ini akan muncul di dropdown jenis pelayanan saat peserta mengerjakan quiz
+                </p>
               </div>
             )}
           </div>

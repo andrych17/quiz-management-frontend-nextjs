@@ -26,6 +26,8 @@ interface QuizResultDetail {
   participantName: string;
   email: string;
   nij: string;
+  servoNumber?: string;
+  serviceKey?: string;
   quiz: {
     id: number;
     title: string;
@@ -47,6 +49,7 @@ interface QuizResultDetail {
     totalQuestions: number;
     correctAnswers: number;
     wrongAnswers: number;
+    skippedAnswers?: number;
     scorePercentage: number;
   };
 }
@@ -147,43 +150,58 @@ export default function QuizResultDetailPage() {
   }
 
   return (
-    <BasePageLayout
-      title={result ? `Quiz Result: ${result.participantName}` : 'Loading...'}
-      subtitle={result ? `Detailed view of quiz attempt for ${result.quiz.title}` : 'Loading quiz result details...'}
-    >
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700">{error}</p>
-        </div>
-      )}
+    <div className="flex flex-col h-screen">
+      {/* Fixed Header */}
+      <div className="flex-shrink-0 bg-white border-b sticky top-0 z-10 shadow-sm">
+        <div className="px-6 py-4">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {result ? `Quiz Result: ${result.participantName}` : 'Loading...'}
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            {result ? `Detailed view of quiz attempt for ${result.quiz.title}` : 'Loading quiz result details...'}
+          </p>
+          
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700">{error}</p>
+            </div>
+          )}
 
-      {loading ? (
-        <div className="text-center py-8">
-          <p className="text-gray-500">Loading quiz result...</p>
-        </div>
-      ) : result ? (
-        <div>
           {/* Header Actions */}
-      <div className="mb-6 flex justify-between items-center">
-        <Button
-          variant="outline"
-          onClick={() => router.back()}
-        >
-          ← Back to Results
-        </Button>
-        <div className="flex space-x-3">
-          <Button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="bg-red-600 hover:bg-red-700 text-white"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            {isDeleting ? 'Deleting...' : 'Delete Result'}
-          </Button>
+          {result && (
+            <div className="mt-4 flex justify-between items-center">
+              <Button
+                variant="outline"
+                onClick={() => router.back()}
+              >
+                ← Back to Results
+              </Button>
+              <div className="flex space-x-3">
+                <Button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  {isDeleting ? 'Deleting...' : 'Delete Result'}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6">
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Loading quiz result...</p>
+            </div>
+          ) : result ? (
+            <div>
 
       {/* Result Overview */}
       <div className="bg-white rounded-lg shadow mb-8">
@@ -211,6 +229,18 @@ export default function QuizResultDetailPage() {
                     <label className="text-sm font-medium text-gray-500 block mb-1">NIJ</label>
                     <p className="text-gray-900">{result.nij}</p>
                  </div>
+                 {result.servoNumber && (
+                   <div>
+                      <label className="text-sm font-medium text-gray-500 block mb-1">Servo Number</label>
+                      <p className="text-gray-900">{result.servoNumber}</p>
+                   </div>
+                 )}
+                 {result.serviceKey && (
+                   <div>
+                      <label className="text-sm font-medium text-gray-500 block mb-1">Service Key</label>
+                      <p className="text-gray-900">{result.serviceKey}</p>
+                   </div>
+                 )}
                </div>
              </div>
              
@@ -261,7 +291,7 @@ export default function QuizResultDetailPage() {
         {/* Score Summary Section */}
         <div className="p-6 bg-gray-50 rounded-b-lg">
              <h3 className="text-md font-medium text-gray-900 mb-6 text-center">Score Summary</h3>
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-5xl mx-auto">
                 <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                   <div className={`text-4xl font-bold mb-1 ${result.passed ? 'text-green-600' : 'text-red-600'}`}>{result.score}</div>
                   <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Nilai Akhir</p>
@@ -274,6 +304,12 @@ export default function QuizResultDetailPage() {
                    <div className="text-3xl font-semibold text-red-600 mb-1">{result.summary.wrongAnswers}</div>
                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Salah</p>
                 </div>
+                {result.summary.skippedAnswers !== undefined && (
+                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                     <div className="text-3xl font-semibold text-yellow-600 mb-1">{result.summary.skippedAnswers}</div>
+                     <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Dilewati</p>
+                  </div>
+                )}
                 <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                    <div className="text-3xl font-semibold text-gray-700 mb-1">{result.summary.totalQuestions}</div>
                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Soal</p>
@@ -385,10 +421,10 @@ export default function QuizResultDetailPage() {
           ))}
         </div>
       </div>
+            </div>
+          ) : null}
         </div>
-      ) : null}
-
-
-    </BasePageLayout>
+      </div>
+    </div>
   );
 }

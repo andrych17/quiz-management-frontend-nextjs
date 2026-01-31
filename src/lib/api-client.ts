@@ -755,6 +755,18 @@ export class AdminAPI extends BaseApiClient {
  * Public Quiz API client (no authentication required)
  */
 export class PublicAPI extends BaseApiClient {
+  static async getServices(): Promise<ApiResponse<Array<{
+    key: string;
+    value: string;
+    description?: string;
+  }>>> {
+    return this.request<Array<{
+      key: string;
+      value: string;
+      description?: string;
+    }>>(`/public/services`);
+  }
+
   static async getPublicQuiz(token: string): Promise<ApiResponse<Quiz>> {
     return this.request<Quiz>(`/public/quiz/${token}`);
   }
@@ -763,6 +775,8 @@ export class PublicAPI extends BaseApiClient {
     participantName: string;
     email: string;
     nij: string;
+    servoNumber?: string;
+    serviceKey: string;
     quizId: number;
     answers: Array<{
       questionId: number;

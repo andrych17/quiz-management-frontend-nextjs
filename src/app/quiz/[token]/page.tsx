@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { API } from '@/lib/api-client';
 import { Quiz, Question, ApiError } from '@/types/api';
+import { getAbsoluteImageUrl } from '@/lib/constants/api';
 
 export default function PublicQuizPage() {
   const params = useParams();
@@ -11,12 +12,15 @@ export default function PublicQuizPage() {
   
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [services, setServices] = useState<Array<{ key: string; value: string; description?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [participantInfo, setParticipantInfo] = useState({
     name: '',
     email: '',
-    nij: ''
+    nij: '',
+    servoNumber: '',
+    serviceKey: ''
   });
   const [currentAnswers, setCurrentAnswers] = useState<{[key: number]: string | string[]}>({});
   const [attemptId, setAttemptId] = useState<number | null>(null);
@@ -33,10 +37,12 @@ export default function PublicQuizPage() {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [completionMessage, setCompletionMessage] = useState('');
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
+  const [zoomedImage, setZoomedImage] = useState<{url: string; alt: string} | null>(null);
 
   useEffect(() => {
     if (token) {
       loadQuiz();
+      loadServices();
     }
   }, [token]);
 
@@ -96,6 +102,18 @@ export default function PublicQuizPage() {
     }
   };
 
+  const loadServices = async () => {
+    try {
+      const response = await API.public.getServices();
+      if (response.success && response.data) {
+        setServices(response.data);
+      }
+    } catch (err: any) {
+      console.error('Failed to load services:', err);
+      // Don't set error - services is optional
+    }
+  };
+
   const handleStartQuiz = async () => {
     // Validate form first
     if (!validateForm()) {
@@ -121,13 +139,6 @@ export default function PublicQuizPage() {
         setIsStarting(false);
         return; // Don't start if already submitted
       }
-
-      // Save participant data to localStorage for future auto-fill
-      const participantKey = `participant_${participantInfo.nij}`;
-      localStorage.setItem(participantKey, JSON.stringify({
-        email: participantInfo.email,
-        name: participantInfo.name
-      }));
 
       // Start quiz directly without API call (no submission yet)
       const localAttemptId = Date.now();
@@ -159,6 +170,8 @@ export default function PublicQuizPage() {
         nij: participantInfo.nij,
         email: participantInfo.email,
         participantName: participantInfo.name,
+        servoNumber: participantInfo.servoNumber || undefined,
+        serviceKey: participantInfo.serviceKey,
         quizId: quiz.id,
         answers: answersArray
       });
@@ -225,6 +238,11 @@ export default function PublicQuizPage() {
     return null;
   };
 
+  const validateServiceKey = (serviceKey: string): string | null => {
+    if (!serviceKey.trim()) return 'Jenis pelayanan harus dipilih';
+    return null;
+  };
+
   const validateForm = (): boolean => {
     const errors: {[key: string]: string} = {};
     
@@ -236,6 +254,9 @@ export default function PublicQuizPage() {
     
     const nameError = validateName(participantInfo.name);
     if (nameError) errors.name = nameError;
+    
+    const serviceKeyError = validateServiceKey(participantInfo.serviceKey);
+    if (serviceKeyError) errors.serviceKey = serviceKeyError;
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -282,22 +303,6 @@ export default function PublicQuizPage() {
       } else {
         setHasSubmittedBefore(false);
         if (!email) setError(null); // Only clear error if not from start quiz flow
-        
-        // Try to get saved participant data for auto-fill
-        const participantKey = `participant_${nij}`;
-        const savedData = localStorage.getItem(participantKey);
-        if (savedData) {
-          try {
-            const data = JSON.parse(savedData);
-            setParticipantInfo(prev => ({
-              ...prev,
-              email: data.email || prev.email,
-              name: data.name || prev.name
-            }));
-          } catch (e) {
-            // Could not parse saved participant data
-          }
-        }
         return false; // Not submitted
       }
     } catch (err: any) {
@@ -350,6 +355,8 @@ export default function PublicQuizPage() {
         nij: participantInfo.nij,
         email: participantInfo.email,
         participantName: participantInfo.name,
+        servoNumber: participantInfo.servoNumber || undefined,
+        serviceKey: participantInfo.serviceKey,
         quizId: quiz.id,
         answers: answersArray
       });
@@ -357,13 +364,7 @@ export default function PublicQuizPage() {
       if (response.success) {
         // Save submission to localStorage to prevent duplicate attempts
         const submissionKey = `quiz_${token}_${participantInfo.nij}`;
-        const participantKey = `participant_${participantInfo.nij}`;
-        
         localStorage.setItem(submissionKey, 'true');
-        localStorage.setItem(participantKey, JSON.stringify({
-          email: participantInfo.email,
-          name: participantInfo.name
-        }));
         
         // Show completion page
         const message = isAutoSubmit 
@@ -437,6 +438,12 @@ export default function PublicQuizPage() {
               <p className="text-blue-900"><strong>Nama:</strong> {participantInfo.name}</p>
               <p className="text-blue-900"><strong>NIJ:</strong> {participantInfo.nij}</p>
               <p className="text-blue-900"><strong>Email:</strong> {participantInfo.email}</p>
+              {participantInfo.serviceKey && (
+                <p className="text-blue-900"><strong>Jenis Pelayanan:</strong> {services.find(s => s.key === participantInfo.serviceKey)?.value || participantInfo.serviceKey}</p>
+              )}
+              {participantInfo.servoNumber && (
+                <p className="text-blue-900"><strong>Servo Number:</strong> {participantInfo.servoNumber}</p>
+              )}
             </div>
           </div>
           <div className="border-t pt-4">
@@ -574,6 +581,53 @@ export default function PublicQuizPage() {
               )}
             </div>
 
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                Jenis Pelayanan *
+              </label>
+              <select
+                value={participantInfo.serviceKey}
+                onChange={(e) => {
+                  setParticipantInfo(prev => ({...prev, serviceKey: e.target.value}));
+                  if (validationErrors.serviceKey) {
+                    setValidationErrors(prev => ({...prev, serviceKey: ''}));
+                  }
+                }}
+                className={`w-full px-3 py-2 text-sm sm:text-base border rounded-md focus:outline-none focus:ring-2 ${
+                  validationErrors.serviceKey 
+                    ? 'border-red-300 focus:ring-red-500' 
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
+                required
+              >
+                <option value="">-- Pilih Jenis Pelayanan --</option>
+                {services.map((service) => (
+                  <option key={service.key} value={service.key}>
+                    {service.value}
+                  </option>
+                ))}
+              </select>
+              {validationErrors.serviceKey && (
+                <p className="text-red-500 text-xs sm:text-sm mt-1">{validationErrors.serviceKey}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                Servo Number
+              </label>
+              <input
+                type="text"
+                value={participantInfo.servoNumber}
+                onChange={(e) => {
+                  setParticipantInfo(prev => ({...prev, servoNumber: e.target.value}));
+                }}
+                className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Masukkan servo number (opsional)"
+              />
+              <p className="text-gray-500 text-xs mt-1">Kosongkan jika tidak ada</p>
+            </div>
+
             {error && (
               <div className="bg-red-50 text-red-700 p-2 sm:p-3 rounded-md text-xs sm:text-sm">
                 {error}
@@ -582,9 +636,9 @@ export default function PublicQuizPage() {
 
             <button
               onClick={handleStartQuiz}
-              disabled={isStarting || !participantInfo.nij || !participantInfo.email || !participantInfo.name || Object.values(validationErrors).some(error => error) || hasSubmittedBefore}
+              disabled={isStarting || !participantInfo.nij || !participantInfo.email || !participantInfo.name || !participantInfo.serviceKey || Object.values(validationErrors).some(error => error) || hasSubmittedBefore}
               className={`w-full py-2.5 sm:py-3 px-4 rounded-md text-sm sm:text-base font-medium ${
-                isStarting || !participantInfo.nij || !participantInfo.email || !participantInfo.name || Object.values(validationErrors).some(error => error) || hasSubmittedBefore
+                isStarting || !participantInfo.nij || !participantInfo.email || !participantInfo.name || !participantInfo.serviceKey || Object.values(validationErrors).some(error => error) || hasSubmittedBefore
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
@@ -671,16 +725,41 @@ export default function PublicQuizPage() {
                     {(question as any).questionText || (question as any).question || (question as any).text || 'Question text'}
                   </p>
 
-                  {/* Question Image */}
+                  {/* Question Images */}
                   {(question as any).images && (question as any).images.length > 0 && (
                     <div className="mt-4 mb-4">
-                      <img 
-                        src={(question as any).images[0].downloadUrl} 
-                        alt={(question as any).images[0].altText || "Question image"}
-                        className="rounded-lg shadow-md"
-                        style={{ width: '200px', height: '150px', objectFit: 'cover' }}
-                        loading="lazy"
-                      />
+                      <div className={`grid gap-3 ${(question as any).images.length === 1 ? 'grid-cols-1' : (question as any).images.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                        {(question as any).images
+                          .sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0))
+                          .map((image: any, imgIndex: number) => (
+                            <div key={image.id || imgIndex} className="relative">
+                              <img 
+                                src={getAbsoluteImageUrl(image.downloadUrl || image.imageUrl)} 
+                                alt={image.altText || image.imageCaption || `Question ${questionNumber} image ${imgIndex + 1}`}
+                                className="rounded-lg shadow-md w-full h-auto max-h-64 object-contain bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity"
+                                loading="lazy"
+                                onClick={() => {
+                                  const imageUrl = getAbsoluteImageUrl(image.downloadUrl || image.imageUrl);
+                                  if (imageUrl) {
+                                    setZoomedImage({
+                                      url: imageUrl,
+                                      alt: image.altText || image.imageCaption || `Question ${questionNumber} image ${imgIndex + 1}`
+                                    });
+                                  }
+                                }}
+                                title="Klik untuk memperbesar"
+                              />
+                              {image.imageCaption && (
+                                <p className="text-xs text-gray-500 mt-1 text-center">{image.imageCaption}</p>
+                              )}
+                            </div>
+                          ))}
+                      </div>
+                      {(question as any).images.length > 1 && (
+                        <p className="text-xs text-gray-400 mt-2 text-center">
+                          📷 {(question as any).images.length} gambar - klik untuk memperbesar
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -822,6 +901,33 @@ export default function PublicQuizPage() {
               <p className="text-sm sm:text-base font-semibold">Time Running Out!</p>
               <p className="text-xs sm:text-sm">Quiz will auto-submit in {timeLeft} seconds</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Zoom Modal */}
+      {zoomedImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4"
+          onClick={() => setZoomedImage(null)}
+        >
+          <div className="relative max-w-7xl max-h-full">
+            <button
+              onClick={() => setZoomedImage(null)}
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 text-2xl font-bold"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+            <img 
+              src={zoomedImage.url} 
+              alt={zoomedImage.alt}
+              className="max-w-full max-h-[90vh] object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            {zoomedImage.alt && (
+              <p className="text-white text-center mt-2 text-sm">{zoomedImage.alt}</p>
+            )}
           </div>
         </div>
       )}

@@ -25,12 +25,12 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
   return (
     <div className={`space-y-3 ${className}`}>
       {/* Image Preview */}
-      <div className="relative inline-block">
+      <div className="relative inline-block w-full">
         <img
           src={imageUrl}
           alt={altText || 'Preview'}
-          className="rounded-lg border border-gray-200 shadow-sm"
-          style={{ width: '300px', height: '225px', objectFit: 'cover' }}
+          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          style={{ maxHeight: '200px', objectFit: 'contain' }}
         />
         
         {/* Remove Button */}

@@ -176,6 +176,27 @@ export default function ConfigPage() {
       }
     },
     {
+      key: "isDisplayToUser",
+      label: "Display to User",
+      render: (value: unknown, row: unknown) => {
+        const config = row as Config;
+        // Only show for services group
+        if (config.group !== 'services') {
+          return <span className="text-gray-400">-</span>;
+        }
+        const isDisplayToUser = value === true || value === 'true' || value === 1 || value === '1';
+        return (
+          <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded ${
+            isDisplayToUser 
+              ? 'bg-blue-100 text-blue-800' 
+              : 'bg-gray-100 text-gray-600'
+          }`}>
+            {isDisplayToUser ? 'Yes' : 'No'}
+          </span>
+        );
+      }
+    },
+    {
       key: "order",
       label: "Order",
       render: (value: unknown) => (
