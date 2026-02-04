@@ -272,6 +272,17 @@ export default function PublicQuizPage() {
 
       // Save to localStorage
       const storageKey = `quiz_attempt_${quiz.id}`;
+      
+      // Ensure we have valid startDateTime and endDateTime
+      const validStartDateTime = attemptData.startDateTime || new Date().toISOString();
+      const validEndDateTime = attemptData.endDateTime || (() => {
+        // Fallback: calculate endDateTime from quiz duration
+        const start = new Date(validStartDateTime);
+        const duration = quiz.durationMinutes || 60;
+        const end = new Date(start.getTime() + duration * 60 * 1000);
+        return end.toISOString();
+      })();
+      
       const localData = {
         attemptId: attemptData.id,
         quizId: quiz.id,
@@ -280,13 +291,20 @@ export default function PublicQuizPage() {
         nij: participantInfo.nij,
         servoNumber: participantInfo.servoNumber,
         serviceKey: participantInfo.serviceKey,
-        startDateTime: attemptData.startDateTime || new Date().toISOString(),
-        endDateTime: attemptData.endDateTime || new Date().toISOString(),
+        startDateTime: validStartDateTime,
+        endDateTime: validEndDateTime,
         answers: {},
         currentPage: 0,
         lastUpdated: new Date().toISOString()
       };
       localStorage.setItem(storageKey, JSON.stringify(localData));
+
+      console.log('📝 Saved to localStorage:', {
+        startDateTime: validStartDateTime,
+        endDateTime: validEndDateTime,
+        duration: quiz.durationMinutes,
+        remainingSeconds: Math.floor(remainingMs / 1000)
+      });
 
       setShowQuiz(true);
     } catch (err: any) {
@@ -602,10 +620,34 @@ export default function PublicQuizPage() {
 
   if (error || !quiz) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center text-red-600">
-          <p className="text-xl mb-4">⚠️ {error || 'Quiz not found'}</p>
-          <p className="text-gray-600">Silakan hubungi administrator untuk mendapatkan link quiz yang valid.</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-4xl">⚠️</span>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Oops!</h2>
+            <p className="text-red-600 mb-4">{error || 'Quiz not found'}</p>
+            <p className="text-gray-600 text-sm mb-6">
+              Silakan hubungi administrator untuk mendapatkan link quiz yang valid.
+            </p>
+            <button
+              onClick={() => {
+                setError(null);
+                setHasSubmittedBefore(false);
+                setParticipantInfo({
+                  name: '',
+                  email: '',
+                  nij: '',
+                  servoNumber: '',
+                  serviceKey: ''
+                });
+              }}
+              className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors"
+            >
+              ← Kembali ke Form
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -925,42 +967,49 @@ export default function PublicQuizPage() {
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
             <div className="flex-1 min-w-0">
               <h1 className="text-base sm:text-xl font-semibold text-gray-900 truncate">{quiz.title}</h1>
-              <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 mt-1">
-                <span>Q {currentQuestionIndex + 1}/{questions.length}</span>
-                <span>•</span>
-                <span>✓ {answeredCount}/{questions.length}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-600 mt-1">
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <span>Q {currentQuestionIndex + 1}/{questions.length}</span>
+                  <span>•</span>
+                  <span>✓ {answeredCount}/{questions.length}</span>
+                </div>
+                {participantInfo.nij && (
+                  <div className="flex items-center gap-2 sm:gap-4">
+                    <span className="hidden sm:inline">•</span>
+                    <span className="font-medium">NIJ: {participantInfo.nij}</span>
+                    {participantInfo.email && (
+                      <>
+                        <span>•</span>
+                        <span className="truncate max-w-[150px] sm:max-w-none">{participantInfo.email}</span>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
             <div className="flex items-center gap-2 sm:gap-4 self-start sm:self-auto">
               {/* Timer */}
-              <div className={`flex flex-col items-center gap-0.5 px-2.5 sm:px-3 py-1 rounded-lg ${
-                (timeLeft || 0) <= 300 ? 'bg-red-100 border border-red-200' :
-                (timeLeft || 0) <= 600 ? 'bg-yellow-100 border border-yellow-200' :
-                'bg-green-100 border border-green-200'
-              }`}>
-                <div className="flex items-center gap-1.5">
+              {timeLeft !== null && (
+                <div className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg ${
+                  timeLeft <= 300 ? 'bg-red-100 border border-red-200' :
+                  timeLeft <= 600 ? 'bg-yellow-100 border border-yellow-200' :
+                  'bg-green-100 border border-green-200'
+                }`}>
                   <span className={`text-base sm:text-lg ${
-                    (timeLeft || 0) <= 300 ? 'text-red-800' :
-                    (timeLeft || 0) <= 600 ? 'text-yellow-800' :
+                    timeLeft <= 300 ? 'text-red-800' :
+                    timeLeft <= 600 ? 'text-yellow-800' :
                     'text-green-800'
                   }`}>⏰</span>
-                  <span className={`font-mono text-xs sm:text-base font-semibold ${
-                    (timeLeft || 0) <= 300 ? 'text-red-800' :
-                    (timeLeft || 0) <= 600 ? 'text-yellow-800' :
+                  <span className={`font-mono text-sm sm:text-base font-semibold ${
+                    timeLeft <= 300 ? 'text-red-800' :
+                    timeLeft <= 600 ? 'text-yellow-800' :
                     'text-green-800'
                   }`}>
-                    {formatTime(timeLeft || 0)}
+                    {formatTime(timeLeft)}
                   </span>
                 </div>
-                <span className={`text-[10px] sm:text-xs ${
-                  (timeLeft || 0) <= 300 ? 'text-red-700' :
-                  (timeLeft || 0) <= 600 ? 'text-yellow-700' :
-                  'text-green-700'
-                }`}>
-                  🔴 LIVE - Tidak bisa pause
-                </span>
-              </div>
+              )}
             </div>
           </div>
         {error && (
