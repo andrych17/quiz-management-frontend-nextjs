@@ -6,7 +6,7 @@ import { BasePageLayout, DataTable, Column, DataTableAction, FilterOption, Table
 import { ConfigAPI } from "@/lib/api-client";
 import type { Config } from "@/types/api";
 import { ApiError } from "@/types/api";
-import { CONFIG_GROUPS } from "@/lib/constants/config";
+import { CONFIG_GROUPS, DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from "@/lib/constants/config";
 
 export default function ConfigPage() {
   const router = useRouter();
@@ -15,8 +15,8 @@ export default function ConfigPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterValues, setFilterValues] = useState<TableFilters>({});
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'createdAt', direction: 'DESC' });
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [limit, setLimit] = useState(DEFAULT_PAGE_SIZE);
   const [total, setTotal] = useState(0);
 
   // Memoize filter values to prevent unnecessary re-renders

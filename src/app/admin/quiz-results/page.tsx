@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/lib/api-client';
+import { formatDateTime, formatDate } from '@/lib/date';
 import DataTable, { Column, DataTableAction } from '@/components/ui/table/DataTable';
 import BasePageLayout from '@/components/ui/layout/BasePageLayout';
 
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import TableFilterBar from '@/components/ui/table/TableFilterBar';
 import type { FilterOption, TableFilters, SortConfig } from '@/components/ui/table/TableFilterBar';
 import { logger } from '@/lib/logger';
+import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from '@/lib/constants/config';
 
 interface QuizResult {
   id: number;
@@ -48,10 +50,12 @@ export default function QuizResultsPage() {
   });
 
   // Filter and sort states
-  const [filterValues, setFilterValues] = useState<TableFilters>({});
+  const [filterValues, setFilterValues] = useState<TableFilters>({
+    submissionStatus: 'submitted' // Default: hide yang sedang dikerjakan
+  });
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'submittedAt', direction: 'DESC' });
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   // Config options for filters
   const [serviceOptions, setServiceOptions] = useState<Array<{key: string, name: string}>>([]);
@@ -136,6 +140,12 @@ export default function QuizResultsPage() {
       if (currentFilters.endDate) {
         apiParams.endDate = currentFilters.endDate;
       }
+      if (currentFilters.submissionStatus) {
+        apiParams.submissionStatus = currentFilters.submissionStatus;
+      }
+      if (currentFilters.passStatus) {
+        apiParams.passStatus = currentFilters.passStatus;
+      }
 
       const response = await API.attempts.getAttempts(apiParams);
 
@@ -210,14 +220,34 @@ export default function QuizResultsPage() {
         label: 'End Date', 
         type: 'date',
         placeholder: 'Select end date'
+      },
+      {
+        key: 'submissionStatus',
+        label: 'Submission Status',
+        type: 'select',
+        placeholder: 'All Submissions',
+        options: [
+          { value: 'submitted', label: 'Submitted Only' },
+          { value: 'not_submitted', label: 'In Progress Only' }
+        ]
+      },
+      {
+        key: 'passStatus',
+        label: 'Pass Status',
+        type: 'select',
+        placeholder: 'All Results',
+        options: [
+          { value: 'passed', label: 'Passed Only' },
+          { value: 'failed', label: 'Failed Only' }
+        ]
       }
     ] as FilterOption[];
   }, [serviceOptions, locationOptions]);
 
   const handleFilterChange = useCallback((filters: TableFilters) => {
     setFilterValues(filters);
-    setPage(1); // Reset to first page when filtering
-    loadResults(filters, sortConfig, 1);
+    setPage(DEFAULT_PAGE); // Reset to first page when filtering
+    loadResults(filters, sortConfig, DEFAULT_PAGE);
   }, [loadResults, sortConfig]);
 
   const handleFilterValueChange = useCallback((key: string, value: string | number | boolean | undefined) => {
@@ -226,9 +256,10 @@ export default function QuizResultsPage() {
   }, [filterValues, handleFilterChange]);
 
   const handleClearFilters = useCallback(() => {
-    setFilterValues({});
-    setPage(1);
-    loadResults({}, sortConfig, 1);
+    const defaultFilters = { submissionStatus: 'submitted' };
+    setFilterValues(defaultFilters);
+    setPage(DEFAULT_PAGE);
+    loadResults(defaultFilters, sortConfig, DEFAULT_PAGE);
   }, [loadResults, sortConfig]);
 
   const handleExportExcel = async () => {
@@ -258,6 +289,12 @@ export default function QuizResultsPage() {
       }
       if (filterValues.locationKey && filterValues.locationKey !== 'all_locations') {
         queryParams.append('locationKey', String(filterValues.locationKey));
+      }
+      if (filterValues.submissionStatus) {
+        queryParams.append('submissionStatus', String(filterValues.submissionStatus));
+      }
+      if (filterValues.passStatus) {
+        queryParams.append('passStatus', String(filterValues.passStatus));
       }
 
       const queryString = queryParams.toString();
@@ -351,22 +388,37 @@ export default function QuizResultsPage() {
       key: 'score',
       label: 'Score',
       sortable: true,
-      render: (value: unknown, row: QuizResult) => (
-        <div className="text-center">
-          <div className={`text-lg font-semibold ${
-            row.passed ? 'text-green-600' : 'text-red-600'
-          }`}>
-            {row.score}
+      render: (value: unknown, row: QuizResult) => {
+        const isInProgress = !row.submittedAt && !row.completedAt;
+        
+        if (isInProgress) {
+          return (
+            <div className="text-center">
+              <div className="text-sm text-gray-400">-</div>
+              <div className="text-xs px-2 py-1 rounded-full inline-block mt-1 bg-gray-100 text-gray-500">
+                Sedang dikerjakan
+              </div>
+            </div>
+          );
+        }
+        
+        return (
+          <div className="text-center">
+            <div className={`text-lg font-semibold ${
+              row.passed ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {row.score}
+            </div>
+            <div className={`text-xs px-2 py-1 rounded-full inline-block mt-1 ${
+              row.passed 
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-red-100 text-red-800'
+            }`}>
+              {row.passed ? '✅ LULUS' : '❌ TIDAK LULUS'}
+            </div>
           </div>
-          <div className={`text-xs px-2 py-1 rounded-full inline-block mt-1 ${
-            row.passed 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-red-100 text-red-800'
-          }`}>
-            {row.passed ? '✅ LULUS' : '❌ TIDAK LULUS'}
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'answers',
@@ -376,6 +428,17 @@ export default function QuizResultsPage() {
           return (
             <div className="text-center">
               <div className="text-sm text-gray-500">No data</div>
+            </div>
+          );
+        }
+        
+        const isInProgress = !row.submittedAt && !row.completedAt;
+        
+        if (isInProgress) {
+          return (
+            <div className="text-center">
+              <div className="text-sm text-gray-400">-</div>
+              <div className="text-xs text-gray-500">Belum selesai</div>
             </div>
           );
         }
@@ -401,20 +464,50 @@ export default function QuizResultsPage() {
     },
     {
       key: 'submittedAt',
-      label: 'Submitted',
+      label: 'Status',
       sortable: true,
-      render: (value: unknown, row: QuizResult) => (
-        <div className="text-sm">
-          {row.submittedAt 
-            ? new Date(row.submittedAt).toLocaleDateString() + ' ' + 
-              new Date(row.submittedAt).toLocaleTimeString()
-            : row.completedAt
-              ? new Date(row.completedAt).toLocaleDateString() + ' ' + 
-                new Date(row.completedAt).toLocaleTimeString()
-              : 'Not completed'
-          }
-        </div>
-      ),
+      render: (value: unknown, row: QuizResult) => {
+        const hasSubmitted = !!row.submittedAt;
+        const isCompleted = !!row.completedAt;
+        
+        if (hasSubmitted) {
+          return (
+            <div className="text-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+                <span className="font-medium text-green-700">Completed</span>
+              </div>
+              <div className="text-xs text-gray-500">
+                {formatDateTime(row.submittedAt)}
+              </div>
+            </div>
+          );
+        } else if (isCompleted) {
+          return (
+            <div className="text-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
+                <span className="font-medium text-blue-700">Completed</span>
+              </div>
+              <div className="text-xs text-gray-500">
+                {formatDateTime(row.completedAt)}
+              </div>
+            </div>
+          );
+        } else {
+          return (
+            <div className="text-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-block w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
+                <span className="font-medium text-yellow-700">In Progress</span>
+              </div>
+              <div className="text-xs text-gray-500">
+                Started: {formatDateTime(row.startedAt)}
+              </div>
+            </div>
+          );
+        }
+      },
     },
   ];
 
@@ -504,7 +597,7 @@ export default function QuizResultsPage() {
           onPageChange: setPage,
           onLimitChange: (newLimit: number) => {
             setPageSize(newLimit);
-            setPage(1);
+            setPage(DEFAULT_PAGE);
           }
         }}
       />

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { formatDateTime } from '@/lib/date';
 import DataTable, { Column, DataTableAction } from "@/components/ui/table/DataTable";
 import type { FilterOption, TableFilters, SortConfig } from "@/components/ui/table/TableFilterBar";
 import BasePageLayout from "@/components/ui/layout/BasePageLayout";
@@ -9,13 +10,14 @@ import type { Quiz as ApiQuiz } from "@/types/api";
 import { ApiError } from "@/types/api";
 import { API } from "@/lib/api-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from '@/lib/constants/config';
 
 export default function QuizzesPage() {
   const [quizzes, setQuizzes] = useState<ApiQuiz[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [limit, setLimit] = useState(DEFAULT_PAGE_SIZE);
   const [total, setTotal] = useState(0);
   const [filterValues, setFilterValues] = useState<TableFilters>({});
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'createdAt', direction: 'DESC' });
@@ -43,7 +45,7 @@ export default function QuizzesPage() {
 
 
 
-  const loadQuizzes = useCallback(async (filters: TableFilters = {}, sort?: SortConfig, currentPage: number = 1) => {
+  const loadQuizzes = useCallback(async (filters: TableFilters = {}, sort?: SortConfig, currentPage: number = DEFAULT_PAGE) => {
     setLoading(true);
     setError(null);
     try {
@@ -215,14 +217,9 @@ export default function QuizzesPage() {
       label: "Dibuat",
       sortable: true,
       render: (value: unknown, row: ApiQuiz) => {
-        const date = new Date(row.createdAt || '');
         return (
           <div className="text-xs text-gray-600">
-            {date.toLocaleDateString('id-ID', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric'
-            })}
+            {formatDateTime(row.createdAt)}
           </div>
         );
       }

@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { formatDateTime } from '@/lib/date';
 import { BasePageLayout, DataTable, Column, DataTableAction, FilterOption, TableFilters, SortConfig } from "@/components/ui/enhanced";
 import { encryptId } from "@/lib/encryption";
 import { API } from "@/lib/api-client";
 import type { User as ApiUser } from "@/types/api";
 import { ApiError } from "@/types/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from '@/lib/constants/config';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<ApiUser[]>([]);
@@ -15,8 +17,8 @@ export default function UsersPage() {
   const [, setError] = useState<string | null>(null);
   const [filterValues, setFilterValues] = useState<TableFilters>({});
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'createdAt', direction: 'DESC' });
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [limit, setLimit] = useState(DEFAULT_PAGE_SIZE);
   const [total, setTotal] = useState(0);
   const [locationOptions, setLocationOptions] = useState<Array<{ value: string, label: string }>>([]);
   const [serviceOptions, setServiceOptions] = useState<Array<{ value: string, label: string }>>([]);
@@ -240,20 +242,8 @@ export default function UsersPage() {
       render: (value) => {
         const dateValue = String(value);
         return (
-          <div className="text-sm">
-            <div className="font-medium text-gray-900">
-              {new Date(dateValue).toLocaleDateString('id-ID', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-              })}
-            </div>
-            <div className="text-xs text-gray-500">
-              {new Date(dateValue).toLocaleTimeString('id-ID', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
+          <div className="text-sm text-gray-900">
+            {formatDateTime(dateValue)}
           </div>
         );
       }

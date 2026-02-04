@@ -102,7 +102,7 @@ export default function PublicQuizPage() {
 
   // Timer countdown based on endDateTime
   useEffect(() => {
-    if (endDateTime && showQuiz) {
+    if (endDateTime && showQuiz && !quizCompleted) {
       const timer = setInterval(() => {
         const now = new Date();
         const end = new Date(endDateTime);
@@ -121,7 +121,7 @@ export default function PublicQuizPage() {
 
       return () => clearInterval(timer);
     }
-  }, [endDateTime, showQuiz]);
+  }, [endDateTime, showQuiz, quizCompleted]);
 
   // Auto-save to localStorage every few seconds
   useEffect(() => {
@@ -582,6 +582,7 @@ export default function PublicQuizPage() {
         setCompletionMessage(message);
         setQuizCompleted(true);
         setShowQuiz(false);
+        setTimeLeft(null); // Reset timer
         setError(null);
       } else {
         setError('Gagal mengirim jawaban. Silakan coba lagi.');

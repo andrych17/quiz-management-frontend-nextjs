@@ -6,6 +6,7 @@ import { QuizzesAPI } from "@/lib/api-client";
 import { DashboardStats, RecentActivity } from "@/types/api";
 import { format } from "date-fns";
 import { logger } from "@/lib/logger";
+import { DEFAULT_DASHBOARD_ACTIVITY_LIMIT } from '@/lib/constants/config';
 
 export default function AdminDashboard() {
   const { 
@@ -94,7 +95,7 @@ export default function AdminDashboard() {
         }
 
         // Fetch recent activity
-        const activityEndpoint = '/api/dashboard/recent-activity?limit=10';
+        const activityEndpoint = `/api/dashboard/recent-activity?limit=${DEFAULT_DASHBOARD_ACTIVITY_LIMIT}`;
         logger.api('GET', activityEndpoint);
         
         const activityResponse = await fetch(activityEndpoint, {

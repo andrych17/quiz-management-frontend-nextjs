@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-
+import { formatDateTime } from '@/lib/date';
 import { API } from '@/lib/api-client';
 import BasePageLayout from '@/components/ui/layout/BasePageLayout';
 import { Button } from '@/components/ui/button';
@@ -273,11 +273,11 @@ export default function QuizResultDetailPage() {
                  )}
                  <div>
                     <label className="text-sm font-medium text-gray-500 block mb-1">Created At</label>
-                    <p className="text-gray-900">{result.quiz.createdAt ? new Date(result.quiz.createdAt).toLocaleDateString() : '-'}</p>
+                    <p className="text-gray-900">{formatDateTime(result.quiz.createdAt)}</p>
                  </div>
                  <div>
                     <label className="text-sm font-medium text-gray-500 block mb-1">Started At</label>
-                    <p className="text-gray-900">{new Date(result.startedAt).toLocaleString()}</p>
+                    <p className="text-gray-900">{formatDateTime(result.startedAt)}</p>
                  </div>
                  <div>
                     <label className="text-sm font-medium text-gray-500 block mb-1">Completed At</label>
