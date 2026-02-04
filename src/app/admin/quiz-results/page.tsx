@@ -28,6 +28,8 @@ interface QuizResult {
   totalQuestions: number;
   correctAnswers: number;
   quizId: number;
+  status?: string;
+  statusLabel?: string;
 }
 
 export default function QuizResultsPage() {

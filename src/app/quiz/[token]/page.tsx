@@ -50,110 +50,55 @@ export default function PublicQuizPage() {
     }
   }, [token]);
 
-  // Check localStorage and call API resume to validate attempt
+  // Check localStorage for existing attempt on mount
   useEffect(() => {
     if (!quiz) return;
 
-    const checkResumeQuiz = async () => {
-      const storageKey = `quiz_attempt_${quiz.id}`;
-      const savedAttempt = localStorage.getItem(storageKey);
+    const storageKey = `quiz_attempt_${quiz.id}`;
+    const savedAttempt = localStorage.getItem(storageKey);
 
-      if (savedAttempt) {
-        try {
-          const attemptData = JSON.parse(savedAttempt);
+    if (savedAttempt) {
+      try {
+        const attemptData = JSON.parse(savedAttempt);
+        const now = new Date();
+        const end = new Date(attemptData.endDateTime);
 
-          // Call API to validate and get latest attempt data
-          console.log('🔍 Checking resume quiz with API...');
-          const response = await API.public.resumeQuiz(token, {
-            email: attemptData.email,
-            nij: attemptData.nij
-          });
-
-          if (response.success && response.data) {
-            const apiData = response.data;
-
-            // Check if already submitted
-            if (apiData.alreadySubmitted) {
-              localStorage.removeItem(storageKey);
-              setError('Quiz sudah di-submit sebelumnya. Anda tidak dapat mengerjakan quiz ini lagi.');
-              setQuizCompleted(true);
-              return;
-            }
-
-            // Check if time expired
-            if (apiData.timeExpired) {
-              localStorage.removeItem(storageKey);
-              setError('Waktu pengerjaan quiz telah habis. Silakan hubungi administrator.');
-              return;
-            }
-
-            // Resume quiz with validated data from API
-            const now = new Date();
-            const end = new Date(apiData.endDateTime);
-
-            if (now > end) {
-              // Double check - time expired
-              localStorage.removeItem(storageKey);
-              setError('Waktu pengerjaan quiz telah habis. Silakan hubungi administrator.');
-              return;
-            }
-
-            console.log('✅ Quiz can be resumed - restoring state...');
-            setIsResumingQuiz(true);
-            setParticipantInfo({
-              name: apiData.participantName,
-              email: apiData.email,
-              nij: apiData.nij,
-              servoNumber: apiData.servoNumber || '',
-              serviceKey: apiData.serviceKey || ''
-            });
-            setAttemptId(apiData.attemptId);
-            setStartDateTime(apiData.startDateTime);
-            setEndDateTime(apiData.endDateTime);
-
-            // Restore answers: merge API data with localStorage (localStorage has priority)
-            const answersMap: {[key: number]: string | string[]} = {};
-
-            // First, load answers from API (from database)
-            if (apiData.answers && Array.isArray(apiData.answers)) {
-              apiData.answers.forEach((ans: any) => {
-                answersMap[ans.questionId] = ans.answer;
-              });
-            }
-
-            // Then, merge with localStorage answers (localStorage is more recent)
-            if (attemptData.answers && typeof attemptData.answers === 'object') {
-              Object.entries(attemptData.answers).forEach(([questionId, answer]) => {
-                answersMap[parseInt(questionId)] = answer as string | string[];
-              });
-            }
-
-            setCurrentAnswers(answersMap);
-
-            // Restore current page from localStorage
-            setCurrentQuestionIndex(attemptData.currentPage || 0);
-            setShowQuiz(true);
-
-            // Calculate remaining time
-            const remainingMs = end.getTime() - now.getTime();
-            setTimeLeft(Math.floor(remainingMs / 1000));
-
-            console.log('✅ Quiz resumed successfully with timer countdown');
-          } else {
-            // No active attempt found or error - clear localStorage
-            console.log('ℹ️ No active attempt found');
-            localStorage.removeItem(storageKey);
-          }
-        } catch (error: any) {
-          console.error('Failed to check resume quiz:', error);
-          // On API error, clear localStorage and let user start fresh
+        // Validate time locally first
+        if (now > end) {
+          // Time expired - clear localStorage
           localStorage.removeItem(storageKey);
+          setError('Waktu pengerjaan quiz telah habis. Silakan hubungi administrator.');
+          return;
         }
-      }
-    };
 
-    checkResumeQuiz();
-  }, [quiz, token]);
+        // Resume quiz from localStorage
+        console.log('✅ Resuming quiz from localStorage...');
+        setIsResumingQuiz(true);
+        setParticipantInfo({
+          name: attemptData.participantName,
+          email: attemptData.email,
+          nij: attemptData.nij,
+          servoNumber: attemptData.servoNumber || '',
+          serviceKey: attemptData.serviceKey || ''
+        });
+        setAttemptId(attemptData.attemptId);
+        setStartDateTime(attemptData.startDateTime);
+        setEndDateTime(attemptData.endDateTime);
+        setCurrentAnswers(attemptData.answers || {});
+        setCurrentQuestionIndex(attemptData.currentPage || 0);
+        setShowQuiz(true);
+        
+        // Calculate remaining time
+        const remainingMs = end.getTime() - now.getTime();
+        setTimeLeft(Math.floor(remainingMs / 1000));
+
+        console.log('✅ Quiz resumed successfully - Timer:', Math.floor(remainingMs / 1000), 'seconds remaining');
+      } catch (error) {
+        console.error('Failed to restore quiz from localStorage:', error);
+        localStorage.removeItem(storageKey);
+      }
+    }
+  }, [quiz]);
 
   // Timer countdown based on endDateTime
   useEffect(() => {
