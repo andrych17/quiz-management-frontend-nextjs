@@ -249,11 +249,29 @@ export default function PublicQuizPage() {
         return;
       }
       
+      console.log('📥 Received attempt data:', attemptData);
+      
+      // Ensure we have valid timestamps
+      const validStartDateTime = attemptData.startDateTime || new Date().toISOString();
+      const validEndDateTime = attemptData.endDateTime || (() => {
+        // Fallback: calculate endDateTime from quiz duration
+        const start = new Date(validStartDateTime);
+        const duration = quiz.durationMinutes || 60;
+        const end = new Date(start.getTime() + duration * 60 * 1000);
+        return end.toISOString();
+      })();
+      
+      console.log('📅 Timestamps:', {
+        start: validStartDateTime,
+        end: validEndDateTime,
+        durationMinutes: quiz.durationMinutes
+      });
+      
       // Save to state
       setAttemptId(attemptData.id);
-      setStartDateTime(attemptData.startDateTime || null);
-      setEndDateTime(attemptData.endDateTime || null);
-      setQuizStartTime(new Date(attemptData.startDateTime || new Date()));
+      setStartDateTime(validStartDateTime);
+      setEndDateTime(validEndDateTime);
+      setQuizStartTime(new Date(validStartDateTime));
 
       // If resuming, load existing answers
       if (attemptData.answers && attemptData.answers.length > 0) {
@@ -266,22 +284,22 @@ export default function PublicQuizPage() {
 
       // Calculate remaining time
       const now = new Date();
-      const end = new Date(attemptData.endDateTime || now);
-      const remainingMs = end.getTime() - now.getTime();
-      setTimeLeft(Math.floor(remainingMs / 1000));
+      const end = new Date(validEndDateTime);
+      const remainingMs = Math.max(0, end.getTime() - now.getTime());
+      const remainingSeconds = Math.floor(remainingMs / 1000);
+      
+      console.log('⏰ Timer initialized:', {
+        now: now.toISOString(),
+        end: end.toISOString(),
+        remainingMs,
+        remainingSeconds,
+        formatted: formatTime(remainingSeconds)
+      });
+      
+      setTimeLeft(remainingSeconds);
 
       // Save to localStorage
       const storageKey = `quiz_attempt_${quiz.id}`;
-      
-      // Ensure we have valid startDateTime and endDateTime
-      const validStartDateTime = attemptData.startDateTime || new Date().toISOString();
-      const validEndDateTime = attemptData.endDateTime || (() => {
-        // Fallback: calculate endDateTime from quiz duration
-        const start = new Date(validStartDateTime);
-        const duration = quiz.durationMinutes || 60;
-        const end = new Date(start.getTime() + duration * 60 * 1000);
-        return end.toISOString();
-      })();
       
       const localData = {
         attemptId: attemptData.id,
@@ -596,10 +614,13 @@ export default function PublicQuizPage() {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+  const formatTime = (seconds: number | null) => {
+    if (seconds === null || seconds === undefined) return '0:00';
+    
+    const safeSeconds = Math.max(0, Math.floor(seconds));
+    const hours = Math.floor(safeSeconds / 3600);
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+    const secs = safeSeconds % 60;
     
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;

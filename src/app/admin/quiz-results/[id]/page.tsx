@@ -370,7 +370,7 @@ export default function QuizResultDetailPage() {
                       }`}>
                         <span>{option}</span>
                         {option === answer.correctAnswer && (
-                          <span className="text-xs font-semibold bg-green-200 text-green-800 px-2 py-0.5 rounded">Correct</span>
+                          <span className="text-xs font-semibold bg-green-200 text-green-800 px-2 py-0.5 rounded">Correct Answer</span>
                         )}
                         {option === answer.answerText && option !== answer.correctAnswer && (
                           <span className="text-xs font-semibold bg-red-200 text-red-800 px-2 py-0.5 rounded">Your Answer</span>
@@ -381,14 +381,15 @@ export default function QuizResultDetailPage() {
                   </div>
                 )}
                 
-                {/* Correct Answer display for non-multiple choice or general display */}
-                {/* Always showing explicit Correct Answer below question/options as requested */}
-                <div className="mt-4 mb-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <span className="text-sm font-semibold text-blue-900 min-w-[120px]">Correct Answer:</span>
-                      <span className="text-base font-medium text-blue-800">{answer.correctAnswer}</span>
-                   </div>
-                </div>
+                {/* Show correct answer only for non-multiple choice questions */}
+                {answer.questionType !== 'multiple_choice' && answer.questionType !== 'multiple-choice' && (
+                  <div className="mt-4 mb-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                     <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <span className="text-sm font-semibold text-blue-900 min-w-[120px]">Correct Answer:</span>
+                        <span className="text-base font-medium text-blue-800">{answer.correctAnswer}</span>
+                     </div>
+                  </div>
+                )}
               </div>
 
               {/* Your Answer Section - Moved to bottom */}
