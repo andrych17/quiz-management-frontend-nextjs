@@ -179,6 +179,21 @@ export interface Attempt {
   startedAt: string;
   submittedAt?: string;
   timeSpent?: number;
+  participantName?: string;
+  email?: string;
+  nij?: string;
+  servoNumber?: string;
+  serviceKey?: string;
+  startDateTime?: string;
+  endDateTime?: string;
+  correctAnswers?: number;
+  totalQuestions?: number;
+  answers?: Array<{
+    questionId: number;
+    answer: string;
+    isCorrect?: boolean;
+  }>;
+  quiz?: Quiz;
 }
 
 export interface AttemptAnswer {

@@ -28,6 +28,10 @@ export default function PublicQuizPage() {
   const [isStarting, setIsStarting] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [quizStartTime, setQuizStartTime] = useState<Date | null>(null);
+  const [startDateTime, setStartDateTime] = useState<string | null>(null);
+  const [endDateTime, setEndDateTime] = useState<string | null>(null);
+  const [showStartWarning, setShowStartWarning] = useState(false);
+  const [isResumingQuiz, setIsResumingQuiz] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
@@ -46,28 +50,143 @@ export default function PublicQuizPage() {
     }
   }, [token]);
 
-  // Timer countdown
+  // Check localStorage and call API resume to validate attempt
   useEffect(() => {
-    if (timeLeft !== null && timeLeft > 0 && showQuiz) {
-      const timer = setTimeout(() => {
-        setTimeLeft(timeLeft - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0) {
-      // Time's up - auto submit (allow empty answers)
-      handleSubmitQuiz(true);
-    }
-  }, [timeLeft, showQuiz]);
+    if (!quiz) return;
 
-  // Auto-save answers every 10 seconds
+    const checkResumeQuiz = async () => {
+      const storageKey = `quiz_attempt_${quiz.id}`;
+      const savedAttempt = localStorage.getItem(storageKey);
+
+      if (savedAttempt) {
+        try {
+          const attemptData = JSON.parse(savedAttempt);
+
+          // Call API to validate and get latest attempt data
+          console.log('🔍 Checking resume quiz with API...');
+          const response = await API.public.resumeQuiz(token, {
+            email: attemptData.email,
+            nij: attemptData.nij
+          });
+
+          if (response.success && response.data) {
+            const apiData = response.data;
+
+            // Check if already submitted
+            if (apiData.alreadySubmitted) {
+              localStorage.removeItem(storageKey);
+              setError('Quiz sudah di-submit sebelumnya. Anda tidak dapat mengerjakan quiz ini lagi.');
+              setQuizCompleted(true);
+              return;
+            }
+
+            // Check if time expired
+            if (apiData.timeExpired) {
+              localStorage.removeItem(storageKey);
+              setError('Waktu pengerjaan quiz telah habis. Silakan hubungi administrator.');
+              return;
+            }
+
+            // Resume quiz with validated data from API
+            const now = new Date();
+            const end = new Date(apiData.endDateTime);
+
+            if (now > end) {
+              // Double check - time expired
+              localStorage.removeItem(storageKey);
+              setError('Waktu pengerjaan quiz telah habis. Silakan hubungi administrator.');
+              return;
+            }
+
+            console.log('✅ Quiz can be resumed - restoring state...');
+            setIsResumingQuiz(true);
+            setParticipantInfo({
+              name: apiData.participantName,
+              email: apiData.email,
+              nij: apiData.nij,
+              servoNumber: apiData.servoNumber || '',
+              serviceKey: apiData.serviceKey || ''
+            });
+            setAttemptId(apiData.attemptId);
+            setStartDateTime(apiData.startDateTime);
+            setEndDateTime(apiData.endDateTime);
+
+            // Restore answers: merge API data with localStorage (localStorage has priority)
+            const answersMap: {[key: number]: string | string[]} = {};
+
+            // First, load answers from API (from database)
+            if (apiData.answers && Array.isArray(apiData.answers)) {
+              apiData.answers.forEach((ans: any) => {
+                answersMap[ans.questionId] = ans.answer;
+              });
+            }
+
+            // Then, merge with localStorage answers (localStorage is more recent)
+            if (attemptData.answers && typeof attemptData.answers === 'object') {
+              Object.entries(attemptData.answers).forEach(([questionId, answer]) => {
+                answersMap[parseInt(questionId)] = answer as string | string[];
+              });
+            }
+
+            setCurrentAnswers(answersMap);
+
+            // Restore current page from localStorage
+            setCurrentQuestionIndex(attemptData.currentPage || 0);
+            setShowQuiz(true);
+
+            // Calculate remaining time
+            const remainingMs = end.getTime() - now.getTime();
+            setTimeLeft(Math.floor(remainingMs / 1000));
+
+            console.log('✅ Quiz resumed successfully with timer countdown');
+          } else {
+            // No active attempt found or error - clear localStorage
+            console.log('ℹ️ No active attempt found');
+            localStorage.removeItem(storageKey);
+          }
+        } catch (error: any) {
+          console.error('Failed to check resume quiz:', error);
+          // On API error, clear localStorage and let user start fresh
+          localStorage.removeItem(storageKey);
+        }
+      }
+    };
+
+    checkResumeQuiz();
+  }, [quiz, token]);
+
+  // Timer countdown based on endDateTime
   useEffect(() => {
-    if (showQuiz && attemptId && Object.keys(currentAnswers).length > 0) {
+    if (endDateTime && showQuiz) {
+      const timer = setInterval(() => {
+        const now = new Date();
+        const end = new Date(endDateTime);
+        const remainingMs = end.getTime() - now.getTime();
+        const remainingSecs = Math.floor(remainingMs / 1000);
+
+        if (remainingSecs <= 0) {
+          setTimeLeft(0);
+          clearInterval(timer);
+          // Time's up - auto submit
+          handleSubmitQuiz(true);
+        } else {
+          setTimeLeft(remainingSecs);
+        }
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [endDateTime, showQuiz]);
+
+  // Auto-save to localStorage every few seconds
+  useEffect(() => {
+    if (showQuiz && quiz && !isResumingQuiz) {
       const interval = setInterval(() => {
-        saveAnswersAsync();
-      }, 10000); // Save every 10 seconds
+        saveToLocalStorage();
+      }, 5000); // Save every 5 seconds
       return () => clearInterval(interval);
     }
-  }, [showQuiz, attemptId, currentAnswers]);
+  }, [showQuiz, quiz, currentAnswers, currentQuestionIndex, isResumingQuiz]);
 
   const loadQuiz = async () => {
     try {
@@ -114,6 +233,28 @@ export default function PublicQuizPage() {
     }
   };
 
+  const saveToLocalStorage = () => {
+    if (!quiz || !attemptId) return;
+
+    const storageKey = `quiz_attempt_${quiz.id}`;
+    const attemptData = {
+      attemptId,
+      quizId: quiz.id,
+      participantName: participantInfo.name,
+      email: participantInfo.email,
+      nij: participantInfo.nij,
+      servoNumber: participantInfo.servoNumber,
+      serviceKey: participantInfo.serviceKey,
+      startDateTime,
+      endDateTime,
+      answers: currentAnswers,
+      currentPage: currentQuestionIndex,
+      lastUpdated: new Date().toISOString()
+    };
+
+    localStorage.setItem(storageKey, JSON.stringify(attemptData));
+  };
+
   const handleStartQuiz = async () => {
     // Validate form first
     if (!validateForm()) {
@@ -121,6 +262,12 @@ export default function PublicQuizPage() {
       return;
     }
 
+    // Show warning modal before starting
+    setShowStartWarning(true);
+  };
+
+  const confirmStartQuiz = async () => {
+    setShowStartWarning(false);
     setIsStarting(true);
     setError(null);
     setValidationErrors({});
@@ -132,20 +279,70 @@ export default function PublicQuizPage() {
         return;
       }
 
-      // Check for duplicate submission via API before starting
-      const alreadySubmitted = await checkParticipantSubmission(participantInfo.nij);
-      
-      if (alreadySubmitted) {
+      // Call backend API to start/resume quiz
+      const response = await API.public.submitQuiz(token, {
+        nij: participantInfo.nij,
+        email: participantInfo.email,
+        participantName: participantInfo.name,
+        servoNumber: participantInfo.servoNumber || undefined,
+        serviceKey: participantInfo.serviceKey,
+        quizId: quiz.id,
+        answers: [] // Empty array to indicate start, not submit
+      });
+
+      if (!response.success) {
+        setError(response.message || 'Gagal memulai quiz');
         setIsStarting(false);
-        return; // Don't start if already submitted
+        return;
       }
 
-      // Start quiz directly without API call (no submission yet)
-      const localAttemptId = Date.now();
-      setAttemptId(localAttemptId);
-      setQuizStartTime(new Date());
-      const duration = quiz?.durationMinutes || 60;
-      setTimeLeft(duration * 60); // Convert minutes to seconds
+      const attemptData = response.data;
+      
+      if (!attemptData) {
+        setError('Invalid response from server');
+        setIsStarting(false);
+        return;
+      }
+      
+      // Save to state
+      setAttemptId(attemptData.id);
+      setStartDateTime(attemptData.startDateTime || null);
+      setEndDateTime(attemptData.endDateTime || null);
+      setQuizStartTime(new Date(attemptData.startDateTime || new Date()));
+
+      // If resuming, load existing answers
+      if (attemptData.answers && attemptData.answers.length > 0) {
+        const answersMap: {[key: number]: string | string[]} = {};
+        attemptData.answers.forEach((ans: any) => {
+          answersMap[ans.questionId] = ans.answer;
+        });
+        setCurrentAnswers(answersMap);
+      }
+
+      // Calculate remaining time
+      const now = new Date();
+      const end = new Date(attemptData.endDateTime || now);
+      const remainingMs = end.getTime() - now.getTime();
+      setTimeLeft(Math.floor(remainingMs / 1000));
+
+      // Save to localStorage
+      const storageKey = `quiz_attempt_${quiz.id}`;
+      const localData = {
+        attemptId: attemptData.id,
+        quizId: quiz.id,
+        participantName: participantInfo.name,
+        email: participantInfo.email,
+        nij: participantInfo.nij,
+        servoNumber: participantInfo.servoNumber,
+        serviceKey: participantInfo.serviceKey,
+        startDateTime: attemptData.startDateTime || new Date().toISOString(),
+        endDateTime: attemptData.endDateTime || new Date().toISOString(),
+        answers: {},
+        currentPage: 0,
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem(storageKey, JSON.stringify(localData));
+
       setShowQuiz(true);
     } catch (err: any) {
       console.error('Failed to start quiz:', err);
@@ -182,10 +379,26 @@ export default function PublicQuizPage() {
   };
 
   const handleAnswerChange = (questionId: number, answer: string | string[]) => {
-    setCurrentAnswers(prev => ({
-      ...prev,
-      [questionId]: answer
-    }));
+    setCurrentAnswers(prev => {
+      const newAnswers = {
+        ...prev,
+        [questionId]: answer
+      };
+      
+      // Save to localStorage immediately when answer changes
+      if (quiz) {
+        const storageKey = `quiz_attempt_${quiz.id}`;
+        const savedAttempt = localStorage.getItem(storageKey);
+        if (savedAttempt) {
+          const attemptData = JSON.parse(savedAttempt);
+          attemptData.answers = newAnswers;
+          attemptData.lastUpdated = new Date().toISOString();
+          localStorage.setItem(storageKey, JSON.stringify(attemptData));
+        }
+      }
+
+      return newAnswers;
+    });
   };
 
   const handleMultipleAnswerChange = (questionId: number, optionValue: string, isChecked: boolean) => {
@@ -208,13 +421,39 @@ export default function PublicQuizPage() {
 
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      const newIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(newIndex);
+      
+      // Save current page to localStorage
+      if (quiz) {
+        const storageKey = `quiz_attempt_${quiz.id}`;
+        const savedAttempt = localStorage.getItem(storageKey);
+        if (savedAttempt) {
+          const attemptData = JSON.parse(savedAttempt);
+          attemptData.currentPage = newIndex;
+          attemptData.lastUpdated = new Date().toISOString();
+          localStorage.setItem(storageKey, JSON.stringify(attemptData));
+        }
+      }
     }
   };
 
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
+      const newIndex = currentQuestionIndex - 1;
+      setCurrentQuestionIndex(newIndex);
+      
+      // Save current page to localStorage
+      if (quiz) {
+        const storageKey = `quiz_attempt_${quiz.id}`;
+        const savedAttempt = localStorage.getItem(storageKey);
+        if (savedAttempt) {
+          const attemptData = JSON.parse(savedAttempt);
+          attemptData.currentPage = newIndex;
+          attemptData.lastUpdated = new Date().toISOString();
+          localStorage.setItem(storageKey, JSON.stringify(attemptData));
+        }
+      }
     }
   };
 
@@ -362,6 +601,12 @@ export default function PublicQuizPage() {
       });
 
       if (response.success) {
+        // Clear localStorage for this quiz attempt
+        if (quiz) {
+          const storageKey = `quiz_attempt_${quiz.id}`;
+          localStorage.removeItem(storageKey);
+        }
+
         // Save submission to localStorage to prevent duplicate attempts
         const submissionKey = `quiz_${token}_${participantInfo.nij}`;
         localStorage.setItem(submissionKey, 'true');
@@ -647,6 +892,73 @@ export default function PublicQuizPage() {
             </button>
           </div>
         </div>
+
+        {/* Warning Modal */}
+        {showStartWarning && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-10 h-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">⚠️ PERHATIAN!</h2>
+              </div>
+
+              <div className="text-left space-y-3 mb-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li className="flex items-start">
+                      <span className="text-yellow-600 mr-2">•</span>
+                      <span>Quiz akan <strong>LANGSUNG DIMULAI</strong> setelah Anda klik &quot;Mulai&quot;</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-yellow-600 mr-2">•</span>
+                      <span>Timer <strong>TIDAK BISA DI-PAUSE</strong> dan akan terus berjalan</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-yellow-600 mr-2">•</span>
+                      <span>Jika Anda refresh browser, quiz bisa dilanjutkan tapi <strong>timer tetap jalan</strong></span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-yellow-600 mr-2">•</span>
+                      <span>Pastikan <strong>koneksi internet Anda stabil</strong></span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-yellow-600 mr-2">•</span>
+                      <span>Pastikan Anda memiliki waktu cukup untuk menyelesaikan quiz</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                  <p className="text-sm text-blue-900">
+                    <strong>⏱️ Durasi Quiz: {quiz.durationMinutes || 60} menit</strong>
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    📝 {questions.length} pertanyaan
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowStartWarning(false)}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={confirmStartQuiz}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                >
+                  Saya Mengerti, Mulai Quiz
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -677,14 +989,31 @@ export default function PublicQuizPage() {
             
             <div className="flex items-center gap-2 sm:gap-4 self-start sm:self-auto">
               {/* Timer */}
-              <div className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full ${
-                (timeLeft || 0) <= 300 ? 'bg-red-100 text-red-800' :
-                (timeLeft || 0) <= 600 ? 'bg-yellow-100 text-yellow-800' :
-                'bg-green-100 text-green-800'
+              <div className={`flex flex-col items-center gap-0.5 px-2.5 sm:px-3 py-1 rounded-lg ${
+                (timeLeft || 0) <= 300 ? 'bg-red-100 border border-red-200' :
+                (timeLeft || 0) <= 600 ? 'bg-yellow-100 border border-yellow-200' :
+                'bg-green-100 border border-green-200'
               }`}>
-                <span className="text-base sm:text-lg">⏰</span>
-                <span className="font-mono text-xs sm:text-base font-semibold">
-                  {formatTime(timeLeft || 0)}
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-base sm:text-lg ${
+                    (timeLeft || 0) <= 300 ? 'text-red-800' :
+                    (timeLeft || 0) <= 600 ? 'text-yellow-800' :
+                    'text-green-800'
+                  }`}>⏰</span>
+                  <span className={`font-mono text-xs sm:text-base font-semibold ${
+                    (timeLeft || 0) <= 300 ? 'text-red-800' :
+                    (timeLeft || 0) <= 600 ? 'text-yellow-800' :
+                    'text-green-800'
+                  }`}>
+                    {formatTime(timeLeft || 0)}
+                  </span>
+                </div>
+                <span className={`text-[10px] sm:text-xs ${
+                  (timeLeft || 0) <= 300 ? 'text-red-700' :
+                  (timeLeft || 0) <= 600 ? 'text-yellow-700' :
+                  'text-green-700'
+                }`}>
+                  🔴 LIVE - Tidak bisa pause
                 </span>
               </div>
             </div>

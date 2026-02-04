@@ -795,6 +795,13 @@ export class PublicAPI extends BaseApiClient {
       body: JSON.stringify(checkData),
     });
   }
+
+  static async resumeQuiz(token: string, resumeData: { email: string; nij: string }): Promise<ApiResponse<any>> {
+    return this.request<any>(`/public/quiz/${token}/resume`, {
+      method: 'POST',
+      body: JSON.stringify(resumeData),
+    });
+  }
 }
 
 /**
