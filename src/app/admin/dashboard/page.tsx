@@ -348,7 +348,7 @@ export default function AdminDashboard() {
                       {activity.score}%
                     </p>
                     <p className="text-xs text-gray-400">
-                      {activity.completedAt ? format(new Date(activity.completedAt), 'HH:mm') : 'In progress'}
+                      {activity.submittedAt ? format(new Date(activity.submittedAt), 'HH:mm') : 'In progress'}
                     </p>
                   </div>
                 </div>

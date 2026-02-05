@@ -593,19 +593,20 @@ export default function UserDetailPage({ params }: PageProps) {
           </div>
         )}
 
-        <div className="flex justify-between items-center mt-6">
+        <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0 mt-6">
           <div>
             {!isCreateMode && (
               <Button
                 variant="destructive"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={deleting || saving}
+                className="w-full sm:w-auto"
               >
                 {deleting ? 'Menghapus...' : 'Hapus User'}
               </Button>
             )}
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-3 w-full sm:w-auto">
             <Button
               variant="outline"
               onClick={() => {
@@ -617,12 +618,14 @@ export default function UserDetailPage({ params }: PageProps) {
                   router.push("/admin/users");
                 }
               }}
+              className="w-full sm:w-auto"
             >
               Batal
             </Button>
             <Button
               onClick={handleSave}
               disabled={saving || deleting}
+              className="w-full sm:w-auto"
             >
               {saving ? 'Menyimpan...' : (isCreateMode ? 'Buat User' : 'Update User')}
             </Button>
@@ -644,11 +647,12 @@ export default function UserDetailPage({ params }: PageProps) {
               Apakah Anda yakin ingin menghapus user ini? Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={() => setShowDeleteConfirm(false)}
               disabled={deleting}
+              className="w-full sm:w-auto"
             >
               Batal
             </Button>
@@ -656,6 +660,7 @@ export default function UserDetailPage({ params }: PageProps) {
               variant="destructive"
               onClick={handleDelete}
               disabled={deleting}
+              className="w-full sm:w-auto"
             >
               {deleting ? 'Menghapus...' : 'Ya, Hapus'}
             </Button>
@@ -686,10 +691,11 @@ export default function UserDetailPage({ params }: PageProps) {
               {dialogMessage}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex">
             <Button
               onClick={handleDialogClose}
               variant={dialogType === 'success' ? 'default' : 'destructive'}
+              className="w-full"
             >
               {dialogType === 'success' ? 'OK' : 'Close'}
             </Button>

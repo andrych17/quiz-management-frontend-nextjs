@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateTime } from '@/lib/date';
 import DataTable, { Column, DataTableAction } from "@/components/ui/table/DataTable";
@@ -13,8 +13,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from '@/lib/constants/config';
 
 export default function QuizzesPage() {
+  const isInitialLoadRef = useRef(true);
   const [quizzes, setQuizzes] = useState<ApiQuiz[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isRefetching, setIsRefetching] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(DEFAULT_PAGE);
   const [limit, setLimit] = useState(DEFAULT_PAGE_SIZE);
@@ -49,8 +51,12 @@ export default function QuizzesPage() {
 
 
 
-  const loadQuizzes = useCallback(async (filters: TableFilters = {}, sort?: SortConfig, currentPage: number = DEFAULT_PAGE) => {
-    setLoading(true);
+  const loadQuizzes = useCallback(async (filters: TableFilters = {}, sort?: SortConfig, currentPage: number = DEFAULT_PAGE, isInitialLoad = false) => {
+    if (isInitialLoad) {
+      setLoading(true);
+    } else {
+      setIsRefetching(true);
+    }
     setError(null);
     try {
       // Prepare API parameters to match API client structure
@@ -90,7 +96,11 @@ export default function QuizzesPage() {
         setError('Failed to load quizzes');
       }
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      } else {
+        setIsRefetching(false);
+      }
     }
   }, []);
 
@@ -135,12 +145,16 @@ export default function QuizzesPage() {
     if (userServiceKey && userServiceKey !== 'all_services') {
       autoFilters.assignedService = userServiceKey;
     }
-    if (Object.keys(autoFilters).length > 0) {
-      setFilterValues(autoFilters);
-      loadQuizzes(autoFilters);
-    } else {
-      // Load quizzes with existing filters
-      loadQuizzes();
+
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      if (Object.keys(autoFilters).length > 0) {
+        setFilterValues(autoFilters);
+        loadQuizzes(autoFilters, undefined, DEFAULT_PAGE, true);
+      } else {
+        // Load quizzes with existing filters
+        loadQuizzes({}, undefined, DEFAULT_PAGE, true);
+      }
     }
   }, [loadQuizzes, loadConfigOptions, userLocationKey, userServiceKey]);
 
@@ -334,18 +348,23 @@ export default function QuizzesPage() {
   const handleFilterChange = useCallback((filters: TableFilters) => {
     setFilterValues(filters);
     setPage(1); // Reset to first page when filtering
-    // Make API call with new filters
-    loadQuizzes(filters, sortConfig, 1);
-  }, [loadQuizzes, sortConfig, filterValues]);
+    // Make API call with new filters (without setting loading state - just refetching)
+    loadQuizzes(filters, sortConfig, 1, false);
+  }, [loadQuizzes, sortConfig]);
 
   const handleSort = useCallback((field: string, direction: 'ASC' | 'DESC') => {
     setSortConfig({ field, direction });
-  }, []);
+    setPage(1); // Reset to first page when sort changes
+    // Refetch with new sort (without loading state)
+    loadQuizzes(filterValues, { field, direction }, 1, false);
+  }, [loadQuizzes, filterValues]);
 
   const handleLimitChange = useCallback((newLimit: number) => {
     setLimit(newLimit);
     setPage(1); // Reset to first page when changing limit
-  }, []);
+    // Refetch with new limit (without loading state)
+    loadQuizzes(filterValues, sortConfig, 1, false);
+  }, [loadQuizzes, filterValues, sortConfig]);
 
   if (loading) {
     return (
@@ -364,7 +383,7 @@ export default function QuizzesPage() {
         <div className="text-center text-red-600">
           <p className="text-xl mb-4">⚠️ {error}</p>
           <button
-            onClick={() => loadQuizzes()}
+            onClick={() => loadQuizzes({}, undefined, DEFAULT_PAGE, true)}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Try Again
@@ -402,6 +421,7 @@ export default function QuizzesPage() {
         onFilterChange={handleFilterChange}
         onSort={handleSort}
         loading={loading}
+        isRefetching={isRefetching}
         emptyMessage="No quizzes found"
         emptyIcon={
           <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -412,7 +432,10 @@ export default function QuizzesPage() {
           page,
           limit,
           total,
-          onPageChange: setPage,
+          onPageChange: (newPage: number) => {
+            setPage(newPage);
+            loadQuizzes(filterValues, sortConfig, newPage, false);
+          },
           onLimitChange: handleLimitChange
         }}
         showExport

@@ -33,6 +33,7 @@ interface DataTableProps {
   sortConfig?: SortConfig;
   onSort?: (field: string, direction: 'ASC' | 'DESC') => void;
   loading?: boolean;
+  isRefetching?: boolean;
   emptyMessage?: string;
   emptyIcon?: React.ReactNode;
   title?: string;
@@ -61,6 +62,7 @@ export default function DataTable({
   sortConfig,
   onSort,
   loading = false,
+  isRefetching = false,
   emptyMessage = "Tidak ada data yang tersedia",
   emptyIcon,
   title,
@@ -134,7 +136,15 @@ export default function DataTable({
       )}
 
       {/* Mobile Card View */}
-      <div className="md:hidden">
+      <div className={`md:hidden relative ${isRefetching ? 'opacity-60' : ''}`}>
+        {isRefetching && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/30 rounded-lg">
+            <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span className="text-sm text-gray-600">Mengupdate...</span>
+            </div>
+          </div>
+        )}
         <div className="space-y-3">
           {loading ? (
             <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 text-center">
@@ -274,7 +284,15 @@ export default function DataTable({
       </div>
 
       {/* Table - Desktop */}
-      <div className="hidden md:block bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      <div className={`hidden md:block bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden relative ${isRefetching ? 'opacity-60' : ''}`}>
+        {isRefetching && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/30 rounded-lg">
+            <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span className="text-sm text-gray-600">Mengupdate...</span>
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">

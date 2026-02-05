@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/lib/api-client';
@@ -35,11 +35,13 @@ interface QuizResult {
 }
 
 export default function QuizResultsPage() {
+  const isInitialLoadRef = useRef(true);
   const router = useRouter();
   const { isSuperadmin, user } = useAuth();
   const searchParams = useSearchParams();
   const [results, setResults] = useState<QuizResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [pagination, setPagination] = useState({
@@ -80,7 +82,12 @@ export default function QuizResultsPage() {
   }, []);
 
   useEffect(() => {
-    loadResults();
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      loadResults(undefined, undefined, undefined, true);
+    } else {
+      loadResults(undefined, undefined, undefined, false);
+    }
   }, [filterValues, sortConfig, page]);
 
   const loadConfigOptions = useCallback(async () => {
@@ -132,9 +139,13 @@ export default function QuizResultsPage() {
     }
   }, [userLocationKey, userServiceKey]);
 
-  const loadResults = useCallback(async (filters?: TableFilters, sort?: SortConfig, pageNum?: number) => {
+  const loadResults = useCallback(async (filters?: TableFilters, sort?: SortConfig, pageNum?: number, isInitialLoad = false) => {
     try {
-      setLoading(true);
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setIsRefetching(true);
+      }
       setError(null);
 
       const currentFilters = filters || filterValues;
@@ -188,7 +199,11 @@ export default function QuizResultsPage() {
       console.error('Error loading quiz results:', err);
       setError(err.message || 'Failed to load quiz results');
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      } else {
+        setIsRefetching(false);
+      }
     }
   }, [filterValues, sortConfig, page, pageSize]);
 
@@ -273,7 +288,7 @@ export default function QuizResultsPage() {
   const handleFilterChange = useCallback((filters: TableFilters) => {
     setFilterValues(filters);
     setPage(DEFAULT_PAGE); // Reset to first page when filtering
-    loadResults(filters, sortConfig, DEFAULT_PAGE);
+    loadResults(filters, sortConfig, DEFAULT_PAGE, false);
   }, [loadResults, sortConfig]);
 
   const handleFilterValueChange = useCallback((key: string, value: string | number | boolean | undefined) => {
@@ -285,7 +300,7 @@ export default function QuizResultsPage() {
     const defaultFilters = { submissionStatus: 'submitted' };
     setFilterValues(defaultFilters);
     setPage(DEFAULT_PAGE);
-    loadResults(defaultFilters, sortConfig, DEFAULT_PAGE);
+    loadResults(defaultFilters, sortConfig, DEFAULT_PAGE, false);
   }, [loadResults, sortConfig]);
 
   const handleExportExcel = async () => {
@@ -608,8 +623,13 @@ export default function QuizResultsPage() {
         filterValues={filterValues}
         sortConfig={sortConfig}
         onFilterChange={handleFilterChange}
-        onSort={(field, direction) => setSortConfig({ field, direction })}
+        onSort={(field, direction) => {
+          setSortConfig({ field, direction });
+          setPage(DEFAULT_PAGE);
+          loadResults(filterValues, { field, direction }, DEFAULT_PAGE, false);
+        }}
         loading={loading}
+        isRefetching={isRefetching}
         emptyMessage="No quiz results found"
         emptyIcon={
           <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -620,10 +640,14 @@ export default function QuizResultsPage() {
           page: page,
           limit: pageSize,
           total: pagination.totalItems,
-          onPageChange: setPage,
+          onPageChange: (newPage: number) => {
+            setPage(newPage);
+            loadResults(filterValues, sortConfig, newPage, false);
+          },
           onLimitChange: (newLimit: number) => {
             setPageSize(newLimit);
             setPage(DEFAULT_PAGE);
+            loadResults(filterValues, sortConfig, DEFAULT_PAGE, false);
           }
         }}
       />

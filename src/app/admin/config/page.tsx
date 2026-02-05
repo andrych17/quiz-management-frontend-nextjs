@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { BasePageLayout, DataTable, Column, DataTableAction, FilterOption, TableFilters, SortConfig } from "@/components/ui/enhanced";
 import { ConfigAPI } from "@/lib/api-client";
@@ -10,8 +10,10 @@ import { CONFIG_GROUPS, DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from "@/lib/constants/
 
 export default function ConfigPage() {
   const router = useRouter();
+  const isInitialLoadRef = useRef(true);
   const [configs, setConfigs] = useState<Config[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterValues, setFilterValues] = useState<TableFilters>({});
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'createdAt', direction: 'DESC' });
@@ -23,37 +25,41 @@ export default function ConfigPage() {
   const memoizedFilterValues = useMemo(() => filterValues, [filterValues]);
 
   // Load configurations from API
-  const loadConfigs = useCallback(async () => {
-    setLoading(true);
+  const loadConfigs = useCallback(async (isInitialLoad = false) => {
+    if (isInitialLoad) {
+      setLoading(true);
+    } else {
+      setIsRefetching(true);
+    }
     setError(null);
     try {
-      const params = { 
-        page, 
+      const params = {
+        page,
         limit,
         ...memoizedFilterValues
       };
       const response = await ConfigAPI.getConfigs(params);
       if (response.success && response.data) {
         // Handle paginated response
-        const responseData = response.data as { 
-          items?: Config[], 
-          data?: Config[], 
+        const responseData = response.data as {
+          items?: Config[],
+          data?: Config[],
           pagination?: {
             totalItems?: number;
             totalPages?: number;
             currentPage?: number;
             pageSize?: number;
           },
-          total?: number, 
-          count?: number 
+          total?: number,
+          count?: number
         };
-        
+
         const configsData = responseData?.items || responseData?.data || (Array.isArray(response.data) ? response.data : []);
         // Try multiple paths for total count - prioritize pagination.totalItems
-        const totalCount = 
-          responseData?.pagination?.totalItems || 
-          responseData?.total || 
-          responseData?.count || 
+        const totalCount =
+          responseData?.pagination?.totalItems ||
+          responseData?.total ||
+          responseData?.count ||
           (response.data as any)?.total ||
           (response.data as any)?.count ||
           (Array.isArray(configsData) ? configsData.length : 0);
@@ -72,13 +78,23 @@ export default function ConfigPage() {
         setError('Failed to connect to server');
       }
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      } else {
+        setIsRefetching(false);
+      }
     }
   }, [page, limit, memoizedFilterValues]);
 
+  // Load data effect - handles both initial load and refetches
   useEffect(() => {
-    loadConfigs();
-  }, [loadConfigs]);
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      loadConfigs(true);
+    } else {
+      loadConfigs(false);
+    }
+  }, [page, limit, memoizedFilterValues, loadConfigs]);
 
   const handleCreate = () => {
     router.push("/admin/config/new");
@@ -253,7 +269,7 @@ export default function ConfigPage() {
         title="System Configuration"
         actions={
           <button
-            onClick={loadConfigs}
+            onClick={() => loadConfigs(true)}
             className="inline-flex items-center px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
           >
             Retry
@@ -294,6 +310,7 @@ export default function ConfigPage() {
         onFilterChange={handleFilterChange}
         onSort={handleSort}
         loading={loading}
+        isRefetching={isRefetching}
         emptyMessage="Belum ada konfigurasi"
         emptyIcon={
           <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
