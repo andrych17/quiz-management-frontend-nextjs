@@ -4,9 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { API } from "@/lib/api-client";
 import { useAuth } from "@/contexts/AuthContext";
-import type { User } from "@/types/api";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import { TextField } from "@/components/ui/common";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,33 +83,41 @@ export default function UserDetailPage({ params }: PageProps) {
       setError(null);
 
       const [locationRes, serviceRes] = await Promise.all([
-        API.config.getConfigsByGroup('location'),
-        API.config.getConfigsByGroup('service')
+        API.config.getLocationConfigs(),
+        API.config.getServiceConfigs()
       ]);
 
-      // Load location options
-      if (locationRes?.success) {
-        const locationData = locationRes.data || [];
+      // Load location options - handle both success and failure cases
+      if (locationRes?.success && locationRes?.data) {
+        const locationData = locationRes.data;
         const locationOpts = Array.isArray(locationData) ? locationData.map((config: { key: string, value: string }) => ({
           value: config.key,
           label: config.value
         })) : [];
         setLocationOptions(locationOpts);
+      } else {
+        console.warn('Failed to load location options:', locationRes?.message || 'No success flag');
+        setLocationOptions([]);
       }
 
-      // Load service options
-      if (serviceRes?.success) {
-        const serviceData = serviceRes.data || [];
+      // Load service options - handle both success and failure cases
+      if (serviceRes?.success && serviceRes?.data) {
+        const serviceData = serviceRes.data;
         const serviceOpts = Array.isArray(serviceData) ? serviceData.map((config: { key: string, value: string }) => ({
           value: config.key,
           label: config.value
         })) : [];
         setServiceOptions(serviceOpts);
+      } else {
+        console.warn('Failed to load service options:', serviceRes?.message || 'No success flag');
+        setServiceOptions([]);
       }
 
     } catch (err: any) {
       console.error('Failed to load options:', err);
       setError(err?.message || 'Failed to load options');
+      setLocationOptions([]);
+      setServiceOptions([]);
     } finally {
       setLoading(false);
     }
@@ -124,28 +130,34 @@ export default function UserDetailPage({ params }: PageProps) {
 
       const [userRes, locationRes, serviceRes] = await Promise.all([
         API.users.getUser(Number(userId)),
-        API.config.getConfigsByGroup('location'),
-        API.config.getConfigsByGroup('service')
+        API.config.getLocationConfigs(),
+        API.config.getServiceConfigs()
       ]);
 
-      // Load location options
-      if (locationRes?.success) {
-        const locationData = locationRes.data || [];
+      // Load location options - handle both success and failure cases
+      if (locationRes?.success && locationRes?.data) {
+        const locationData = locationRes.data;
         const locationOpts = Array.isArray(locationData) ? locationData.map((config: { key: string, value: string }) => ({
           value: config.key,
           label: config.value
         })) : [];
         setLocationOptions(locationOpts);
+      } else {
+        console.warn('Failed to load location options:', locationRes?.message || 'No success flag');
+        setLocationOptions([]);
       }
 
-      // Load service options
-      if (serviceRes?.success) {
-        const serviceData = serviceRes.data || [];
+      // Load service options - handle both success and failure cases
+      if (serviceRes?.success && serviceRes?.data) {
+        const serviceData = serviceRes.data;
         const serviceOpts = Array.isArray(serviceData) ? serviceData.map((config: { key: string, value: string }) => ({
           value: config.key,
           label: config.value
         })) : [];
         setServiceOptions(serviceOpts);
+      } else {
+        console.warn('Failed to load service options:', serviceRes?.message || 'No success flag');
+        setServiceOptions([]);
       }
 
       if (userRes.success && userRes.data) {
@@ -169,6 +181,8 @@ export default function UserDetailPage({ params }: PageProps) {
     } catch (err: any) {
       console.error('Failed to load user data:', err);
       setError(err?.message || 'Failed to load user data');
+      setLocationOptions([]);
+      setServiceOptions([]);
     } finally {
       setLoading(false);
     }
@@ -310,10 +324,6 @@ export default function UserDetailPage({ params }: PageProps) {
     }
   };
 
-  const handleCancel = () => {
-    router.push('/admin/users');
-  };
-
   if (!userId || loading) {
     return (
       <div className="p-6">
@@ -358,6 +368,17 @@ export default function UserDetailPage({ params }: PageProps) {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div className="flex-1">
+              <h3 className="font-medium text-red-900">Error</h3>
+              <p className="text-sm text-red-800 mt-1">{error}</p>
+            </div>
+          </div>
+        )}
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

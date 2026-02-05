@@ -61,7 +61,7 @@ export default function UsersPage() {
   const loadConfigOptions = useCallback(async () => {
     try {
       // Load location options from backend API
-      const locationRes = await API.config.getConfigsByGroup('location');
+      const locationRes = await API.config.getLocationConfigs();
       const locationData = locationRes?.data || [];
       const locationOpts = Array.isArray(locationData) ? locationData.map((config: { key: string, value: string }) => ({
         value: config.key,
@@ -70,7 +70,7 @@ export default function UsersPage() {
       setLocationOptions(locationOpts);
 
       // Load service options from backend API
-      const serviceRes = await API.config.getConfigsByGroup('service');
+      const serviceRes = await API.config.getServiceConfigs();
       const serviceData = serviceRes?.data || [];
       const serviceOpts = Array.isArray(serviceData) ? serviceData.map((config: { key: string, value: string }) => ({
         value: config.key,

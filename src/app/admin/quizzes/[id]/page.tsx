@@ -171,8 +171,8 @@ export default function QuizDetailPage({ params }: PageProps) {
       setLoading(true);
 
       const [locationRes, serviceRes] = await Promise.all([
-        API.config.getConfigsByGroup('location'),
-        API.config.getConfigsByGroup('service')
+        API.config.getLocationConfigs(),
+        API.config.getServiceConfigs()
       ]);
 
       if (locationRes?.success) {
@@ -206,8 +206,8 @@ export default function QuizDetailPage({ params }: PageProps) {
 
       const [quizRes, locationRes, serviceRes] = await Promise.all([
         API.quizzes.getQuiz(Number(quizId)),
-        API.config.getConfigsByGroup('location'),
-        API.config.getConfigsByGroup('service')
+        API.config.getLocationConfigs(),
+        API.config.getServiceConfigs()
       ]);
 
       if (locationRes?.success) {
