@@ -41,7 +41,11 @@ export default function QuizzesPage() {
   }, [serviceOptions]);
 
   const router = useRouter();
-  const { canAccessAllQuizzes, isAdmin, isSuperadmin, canCreateQuizzes } = useAuth();
+  const { canAccessAllQuizzes, isAdmin, isSuperadmin, canCreateQuizzes, user } = useAuth();
+
+  // User's assigned location and service
+  const userLocationKey = user?.locationKey;
+  const userServiceKey = user?.serviceKey;
 
 
 
@@ -122,9 +126,23 @@ export default function QuizzesPage() {
   useEffect(() => {
     // Load config options first
     loadConfigOptions();
-    // Load quizzes
-    loadQuizzes();
-  }, [loadQuizzes, loadConfigOptions]);
+
+    // Auto-apply filter based on user's assigned location/service
+    const autoFilters: TableFilters = {};
+    if (userLocationKey && userLocationKey !== 'all_locations') {
+      autoFilters.assignedLocation = userLocationKey;
+    }
+    if (userServiceKey && userServiceKey !== 'all_services') {
+      autoFilters.assignedService = userServiceKey;
+    }
+    if (Object.keys(autoFilters).length > 0) {
+      setFilterValues(autoFilters);
+      loadQuizzes(autoFilters);
+    } else {
+      // Load quizzes with existing filters
+      loadQuizzes();
+    }
+  }, [loadQuizzes, loadConfigOptions, userLocationKey, userServiceKey]);
 
   const columns: Column[] = [
     {

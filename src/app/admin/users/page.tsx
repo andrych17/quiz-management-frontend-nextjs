@@ -23,7 +23,11 @@ export default function UsersPage() {
   const [locationOptions, setLocationOptions] = useState<Array<{ value: string, label: string }>>([]);
   const [serviceOptions, setServiceOptions] = useState<Array<{ value: string, label: string }>>([]);
   const router = useRouter();
-  const { canManageUsers } = useAuth();
+  const { canManageUsers, user } = useAuth();
+
+  // Auto-apply filter based on user's assigned location/service
+  const userLocationKey = user?.locationKey;
+  const userServiceKey = user?.serviceKey;
 
   // Memoize filter values to prevent unnecessary re-renders
   const memoizedFilterValues = useMemo(() => filterValues, [filterValues]);
@@ -91,12 +95,23 @@ export default function UsersPage() {
 
     // Only load users if user can manage them
     if (canManageUsers) {
+      // Auto-apply filter based on user's assigned location/service
+      const autoFilters: TableFilters = {};
+      if (userLocationKey && userLocationKey !== 'all_locations') {
+        autoFilters.locationKey = userLocationKey;
+      }
+      if (userServiceKey && userServiceKey !== 'all_services') {
+        autoFilters.serviceKey = userServiceKey;
+      }
+      if (Object.keys(autoFilters).length > 0) {
+        setFilterValues(autoFilters);
+      }
       loadUsers();
     } else {
       setLoading(false);
       setError("You don't have permission to manage users");
     }
-  }, [canManageUsers, loadUsers, loadConfigOptions]);
+  }, [canManageUsers, loadUsers, loadConfigOptions, userLocationKey, userServiceKey]);
 
   // Filter options untuk tabel - using dynamic config data
   const filters: FilterOption[] = useMemo(() => {
@@ -344,12 +359,13 @@ export default function UsersPage() {
       actions={
         <button
           onClick={handleCreate}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-2 sm:px-4 py-1 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
         >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          Add User
+          <span className="hidden sm:inline">Add User</span>
+          <span className="sm:hidden">Add</span>
         </button>
       }
     >

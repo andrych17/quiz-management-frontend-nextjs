@@ -26,7 +26,11 @@ interface PageProps {
 
 export default function UserDetailPage({ params }: PageProps) {
   const router = useRouter();
-  const { isSuperadmin } = useAuth();
+  const { isSuperadmin, user } = useAuth();
+
+  // User's assigned location and service
+  const userLocationKey = user?.locationKey;
+  const userServiceKey = user?.serviceKey;
 
   const [userId, setUserId] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -489,7 +493,9 @@ export default function UserDetailPage({ params }: PageProps) {
                   <SelectValue placeholder="Pilih Location" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Tidak Ada</SelectItem>
+                  {(!userLocationKey || userLocationKey === 'all_locations') && (
+                    <SelectItem value="none">Tidak Ada</SelectItem>
+                  )}
                   {locationOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
@@ -513,7 +519,9 @@ export default function UserDetailPage({ params }: PageProps) {
                   <SelectValue placeholder="Pilih Service" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Tidak Ada</SelectItem>
+                  {(!userServiceKey || userServiceKey === 'all_services') && (
+                    <SelectItem value="none">Tidak Ada</SelectItem>
+                  )}
                   {serviceOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}

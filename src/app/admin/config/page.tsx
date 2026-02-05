@@ -252,9 +252,9 @@ export default function ConfigPage() {
       <BasePageLayout
         title="System Configuration"
         actions={
-          <button 
+          <button
             onClick={loadConfigs}
-            className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            className="inline-flex items-center px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
           >
             Retry
           </button>
@@ -274,12 +274,13 @@ export default function ConfigPage() {
       actions={
         <button
           onClick={handleCreate}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="inline-flex items-center px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Add Configuration
+          <span className="hidden sm:inline">Add Configuration</span>
+          <span className="sm:hidden">Add</span>
         </button>
       }
     >

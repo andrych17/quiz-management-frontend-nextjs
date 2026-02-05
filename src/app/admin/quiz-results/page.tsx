@@ -36,7 +36,7 @@ interface QuizResult {
 
 export default function QuizResultsPage() {
   const router = useRouter();
-  const { isSuperadmin } = useAuth();
+  const { isSuperadmin, user } = useAuth();
   const searchParams = useSearchParams();
   const [results, setResults] = useState<QuizResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,9 +49,23 @@ export default function QuizResultsPage() {
     totalItems: 0,
   });
 
-  // Filter and sort states
-  const [filterValues, setFilterValues] = useState<TableFilters>({
-    submissionStatus: 'submitted' // Default: hide yang sedang dikerjakan
+  // User's assigned location and service
+  const userLocationKey = user?.locationKey;
+  const userServiceKey = user?.serviceKey;
+
+  // Filter and sort states - with auto-apply for user's assigned location/service
+  const [filterValues, setFilterValues] = useState<TableFilters>(() => {
+    const initialFilters: TableFilters = {
+      submissionStatus: 'submitted' // Default: hide yang sedang dikerjakan
+    };
+    // Auto-apply filter based on user's assigned location/service
+    if (userLocationKey && userLocationKey !== 'all_locations') {
+      initialFilters.locationKey = userLocationKey;
+    }
+    if (userServiceKey && userServiceKey !== 'all_services') {
+      initialFilters.serviceKey = userServiceKey;
+    }
+    return initialFilters;
   });
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'submittedAt', direction: 'DESC' });
   const [page, setPage] = useState(DEFAULT_PAGE);
@@ -80,10 +94,12 @@ export default function QuizResultsPage() {
       })) : [];
       // Filter out any potential duplicates and ensure unique keys
       const uniqueLocationOpts = locationOpts.filter(opt => opt.key !== 'all_locations');
-      setLocationOptions([
-        { key: 'all_locations', name: 'All Locations' },
-        ...uniqueLocationOpts
-      ]);
+
+      // Only add "All Locations" option if user has access to all locations
+      const finalLocationOpts = userLocationKey === 'all_locations' || !userLocationKey
+        ? [{ key: 'all_locations', name: 'All Locations' }, ...uniqueLocationOpts]
+        : uniqueLocationOpts;
+      setLocationOptions(finalLocationOpts);
 
       // Load service options from backend API
       const serviceRes = await API.config.getServiceConfigs();
@@ -94,17 +110,27 @@ export default function QuizResultsPage() {
       })) : [];
       // Filter out any potential duplicates and ensure unique keys
       const uniqueServiceOpts = serviceOpts.filter(opt => opt.key !== 'all_services');
-      setServiceOptions([
-        { key: 'all_services', name: 'All Services' },
-        ...uniqueServiceOpts
-      ]);
+
+      // Only add "All Services" option if user has access to all services
+      const finalServiceOpts = userServiceKey === 'all_services' || !userServiceKey
+        ? [{ key: 'all_services', name: 'All Services' }, ...uniqueServiceOpts]
+        : uniqueServiceOpts;
+      setServiceOptions(finalServiceOpts);
     } catch (err) {
       console.error('Failed to load config options:', err);
-      // If API fails or no data, set default options
-      setLocationOptions([{ key: 'all_locations', name: 'All Locations' }]);
-      setServiceOptions([{ key: 'all_services', name: 'All Services' }]);
+      // If API fails or no data, set default options based on user's access
+      if (userLocationKey === 'all_locations' || !userLocationKey) {
+        setLocationOptions([{ key: 'all_locations', name: 'All Locations' }]);
+      } else {
+        setLocationOptions([]);
+      }
+      if (userServiceKey === 'all_services' || !userServiceKey) {
+        setServiceOptions([{ key: 'all_services', name: 'All Services' }]);
+      } else {
+        setServiceOptions([]);
+      }
     }
-  }, []);
+  }, [userLocationKey, userServiceKey]);
 
   const loadResults = useCallback(async (filters?: TableFilters, sort?: SortConfig, pageNum?: number) => {
     try {
