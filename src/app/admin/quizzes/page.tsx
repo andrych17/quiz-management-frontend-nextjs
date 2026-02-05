@@ -366,30 +366,23 @@ export default function QuizzesPage() {
     loadQuizzes(filterValues, sortConfig, 1, false);
   }, [loadQuizzes, filterValues, sortConfig]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading quizzes...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center text-red-600">
-          <p className="text-xl mb-4">⚠️ {error}</p>
+      <BasePageLayout
+        title="Quiz Management"
+        actions={
           <button
             onClick={() => loadQuizzes({}, undefined, DEFAULT_PAGE, true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="inline-flex items-center px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
           >
-            Try Again
+            Retry
           </button>
+        }
+      >
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="text-red-700">{error}</div>
         </div>
-      </div>
+      </BasePageLayout>
     );
   }
 

@@ -344,11 +344,18 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
+                    {activity.correctAnswers !== undefined && activity.totalQuestions !== undefined ? (
+                      <p className="text-sm font-bold text-blue-600">
+                        {activity.correctAnswers}/{activity.totalQuestions}
+                      </p>
+                    ) : (
+                      <p className="text-sm font-bold text-gray-400">-</p>
+                    )}
                     <p className={`text-sm font-bold ${activity.passed ? 'text-green-600' : 'text-red-600'}`}>
-                      {activity.score}%
+                      Score : {activity.score}
                     </p>
-                    <p className="text-xs text-gray-400">
-                      {activity.submittedAt ? format(new Date(activity.submittedAt), 'HH:mm') : 'In progress'}
+                    <p className={`text-xs font-medium ${activity.submittedAt ? 'text-green-600' : 'text-yellow-600'}`}>
+                      {activity.submittedAt ? 'Completed' : 'In progress'}
                     </p>
                   </div>
                 </div>

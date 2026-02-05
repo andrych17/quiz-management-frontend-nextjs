@@ -291,11 +291,17 @@ export default function QuizResultDetailPage() {
         {/* Score Summary Section */}
         <div className="p-6 bg-gray-50 rounded-b-lg">
              <h3 className="text-md font-medium text-gray-900 mb-6 text-center">Score Summary</h3>
-             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-5xl mx-auto">
+             <div className="grid grid-cols-2 md:grid-cols-6 gap-4 max-w-6xl mx-auto">
                 <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                   <div className={`text-4xl font-bold mb-1 ${result.passed ? 'text-green-600' : 'text-red-600'}`}>{result.score}</div>
                   <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Nilai Akhir</p>
                 </div>
+                {result.quiz.passingScore && (
+                  <div className="text-center p-4 bg-white rounded-lg shadow-sm border-2 border-blue-200">
+                    <div className="text-3xl font-semibold text-blue-600 mb-1">{result.quiz.passingScore}</div>
+                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Syarat Lulus</p>
+                  </div>
+                )}
                 <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                   <div className="text-3xl font-semibold text-green-600 mb-1">{result.summary.correctAnswers}</div>
                   <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Benar</p>

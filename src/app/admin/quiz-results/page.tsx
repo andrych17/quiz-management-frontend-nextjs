@@ -629,7 +629,7 @@ export default function QuizResultsPage() {
           loadResults(filterValues, { field, direction }, DEFAULT_PAGE, false);
         }}
         loading={loading}
-        isRefetching={isRefetching}
+        isRefetching={isRefetching && !loading}
         emptyMessage="No quiz results found"
         emptyIcon={
           <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

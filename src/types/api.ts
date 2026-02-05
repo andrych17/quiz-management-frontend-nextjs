@@ -331,5 +331,8 @@ export interface RecentActivity {
   startedAt: string;
   completedAt: string | null;
   submittedAt: string | null;
+  correctAnswers?: number;
+  totalQuestions?: number;
+  passingScore?: number;
 }
 

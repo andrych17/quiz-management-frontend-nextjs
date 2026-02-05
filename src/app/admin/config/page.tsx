@@ -283,7 +283,6 @@ export default function ConfigPage() {
     );
   }
 
-  // Debug pagination props
   return (
     <BasePageLayout
       title="System Configuration"
