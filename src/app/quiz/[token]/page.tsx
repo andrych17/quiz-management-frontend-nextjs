@@ -41,6 +41,7 @@ export default function PublicQuizPage() {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [completionMessage, setCompletionMessage] = useState('');
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
+  const submitButtonRef = useRef<HTMLDivElement>(null);
   const [zoomedImage, setZoomedImage] = useState<{url: string; alt: string} | null>(null);
 
   useEffect(() => {
@@ -112,8 +113,6 @@ export default function PublicQuizPage() {
         if (remainingSecs <= 0) {
           setTimeLeft(0);
           clearInterval(timer);
-          // Time's up - auto submit
-          handleSubmitQuiz(true);
         } else {
           setTimeLeft(remainingSecs);
         }
@@ -122,6 +121,16 @@ export default function PublicQuizPage() {
       return () => clearInterval(timer);
     }
   }, [endDateTime, showQuiz, quizCompleted]);
+
+  // Auto-scroll to submit button and show message when time expires
+  useEffect(() => {
+    if (timeLeft === 0 && submitButtonRef.current) {
+      // Scroll to submit button
+      setTimeout(() => {
+        submitButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [timeLeft]);
 
   // Auto-save to localStorage every few seconds
   useEffect(() => {
@@ -1131,16 +1140,17 @@ export default function PublicQuizPage() {
                   {(question as any).questionType === 'multiple-choice' && (question as any).options && (
                     <div className="space-y-2 sm:space-y-3">
                       {(question as any).options.map((option: string, index: number) => (
-                        <label key={index} className="flex items-start space-x-2 sm:space-x-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                        <label key={index} className={`flex items-start space-x-2 sm:space-x-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg ${timeLeft && timeLeft > 0 ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-100 cursor-not-allowed'}`}>
                           <input
                             type="radio"
                             name={`question_${question.id}`}
                             value={option}
                             checked={questionAnswer === option}
                             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                            className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0"
+                            disabled={timeLeft !== null && timeLeft <= 0}
+                            className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0 disabled:opacity-50"
                           />
-                          <span className="flex-1 text-sm sm:text-base text-gray-900">{option}</span>
+                          <span className={`flex-1 text-sm sm:text-base ${timeLeft && timeLeft > 0 ? 'text-gray-900' : 'text-gray-500'}`}>{option}</span>
                         </label>
                       ))}
                     </div>
@@ -1154,15 +1164,16 @@ export default function PublicQuizPage() {
                         const isChecked = currentAnswerArray.includes(option);
                         
                         return (
-                          <label key={index} className="flex items-start space-x-2 sm:space-x-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                          <label key={index} className={`flex items-start space-x-2 sm:space-x-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg ${timeLeft && timeLeft > 0 ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-100 cursor-not-allowed'}`}>
                             <input
                               type="checkbox"
                               value={option}
                               checked={isChecked}
                               onChange={(e) => handleMultipleAnswerChange(question.id, option, e.target.checked)}
-                              className="h-4 w-4 text-blue-600 rounded mt-0.5 flex-shrink-0"
+                              disabled={timeLeft !== null && timeLeft <= 0}
+                              className="h-4 w-4 text-blue-600 rounded mt-0.5 flex-shrink-0 disabled:opacity-50"
                             />
-                            <span className="flex-1 text-sm sm:text-base text-gray-900">{option}</span>
+                            <span className={`flex-1 text-sm sm:text-base ${timeLeft && timeLeft > 0 ? 'text-gray-900' : 'text-gray-500'}`}>{option}</span>
                           </label>
                         );
                       })}
@@ -1177,16 +1188,17 @@ export default function PublicQuizPage() {
                   {(question as any).questionType === 'true-false' && (
                     <div className="space-y-2 sm:space-y-3">
                       {['true', 'false'].map((option) => (
-                        <label key={option} className="flex items-center space-x-2 sm:space-x-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                        <label key={option} className={`flex items-center space-x-2 sm:space-x-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg ${timeLeft && timeLeft > 0 ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-100 cursor-not-allowed'}`}>
                           <input
                             type="radio"
                             name={`question_${question.id}`}
                             value={option}
                             checked={questionAnswer === option}
                             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                            className="h-4 w-4 text-blue-600 flex-shrink-0"
+                            disabled={timeLeft !== null && timeLeft <= 0}
+                            className="h-4 w-4 text-blue-600 flex-shrink-0 disabled:opacity-50"
                           />
-                          <span className="flex-1 text-sm sm:text-base text-gray-900 capitalize">{option}</span>
+                          <span className={`flex-1 text-sm sm:text-base capitalize ${timeLeft && timeLeft > 0 ? 'text-gray-900' : 'text-gray-500'}`}>{option}</span>
                         </label>
                       ))}
                     </div>
@@ -1199,15 +1211,33 @@ export default function PublicQuizPage() {
           })}
         </div>
 
+        {/* Time Expired Message */}
+        {timeLeft !== null && timeLeft <= 0 && (
+          <div className="flex justify-center mt-6 sm:mt-8">
+            <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4 sm:p-6 max-w-md w-full">
+              <p className="text-red-700 font-semibold text-center text-sm sm:text-base">
+                ⏰ Anda harus submit quiz, waktu telah abis
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Submit Button */}
-        <div className={`flex justify-center mt-6 sm:mt-8 ${
-          timeLeft !== null && timeLeft <= 60 ? 'mb-24' : ''
-        }`}>
+        <div
+          ref={submitButtonRef}
+          className={`flex justify-center mt-6 sm:mt-8 ${
+            timeLeft !== null && timeLeft <= 60 ? 'mb-24' : ''
+          }`}
+        >
           <button
             onClick={() => setShowConfirmSubmit(true)}
-            className="px-8 py-3 text-base sm:text-lg bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium shadow-lg"
+            className={`px-8 py-3 text-base sm:text-lg rounded-lg font-medium shadow-lg ${
+              timeLeft !== null && timeLeft <= 0
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
           >
-            Submit Quiz
+            {timeLeft !== null && timeLeft <= 0 ? 'Submit Quiz (Time Expired)' : 'Submit Quiz'}
           </button>
         </div>
       </div>
@@ -1228,7 +1258,12 @@ export default function PublicQuizPage() {
                 ⚠️ {questions.length - answeredCount} pertanyaan belum dijawab!
               </p>
             )}
-            <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6">
+            {timeLeft !== null && timeLeft <= 0 && (
+              <p className="text-xs sm:text-sm text-red-600 font-medium mb-2">
+                ⚠️ Waktu sudah habis! Tetapi Anda tetap dapat mensubmit jawaban Anda.
+              </p>
+            )}
+            <p className={`text-xs sm:text-sm mb-4 sm:mb-6 ${timeLeft !== null && timeLeft <= 0 ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
               Time remaining: {formatTime(timeLeft || 0)}
             </p>
             

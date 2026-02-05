@@ -372,6 +372,18 @@ export class QuizzesAPI extends BaseApiClient {
     });
   }
 
+  // Copy quiz as new template - backend handles all copying including images
+  static async copyQuiz(id: number, copyData: {
+    title: string;
+    locationKey?: string;
+    serviceKey?: string;
+  }): Promise<ApiResponse<Quiz>> {
+    return this.request<Quiz>(`/quizzes/${id}/copy`, {
+      method: 'POST',
+      body: JSON.stringify(copyData),
+    });
+  }
+
   static async getTemplatePreview(templateId: number): Promise<ApiResponse<Quiz>> {
     return this.request<Quiz>(`/quizzes/${templateId}/template-preview`);
   }

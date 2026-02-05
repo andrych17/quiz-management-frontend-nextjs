@@ -616,111 +616,17 @@ export default function QuizDetailPage({ params }: PageProps) {
         return;
       }
 
-      // Prepare quiz data with new values
-      const quizData: any = {
+      // Call dedicated copy endpoint - backend handles all copying including images
+      const result = await API.quizzes.copyQuiz(Number(quizId), {
         title: copyFormData.title.trim(),
-        description: formData.description,
         locationKey: copyFormData.locationKey || undefined,
         serviceKey: copyFormData.serviceKey || undefined,
-        passingScore: formData.passingScore,
-        questionsPerPage: formData.questionsPerPage,
-        durationMinutes: formData.durationMinutes,
-      };
-
-      // Copy questions
-      if (questions.length > 0) {
-        quizData.questions = questions.map((q, index) => {
-          let apiQuestionType = q.questionType.replace(/_/g, '-');
-
-          // Build question object
-          const questionData: any = {
-            questionText: q.questionText,
-            questionType: apiQuestionType,
-            options: q.options || [],
-            order: index,
-          };
-
-          // Add correctAnswer based on question type
-          if (q.questionType === 'multiple_choice') {
-            // For multiple choice, convert indices back to actual option values
-            const answerValue: any = q.correctAnswer;
-            const options = questionData.options || [];
-
-            if (Array.isArray(answerValue)) {
-              const validAnswers = answerValue
-                .map((a: any) => {
-                  // Check if it's an index (numeric string)
-                  const idx = parseInt(a);
-                  if (!isNaN(idx) && idx >= 0 && idx < options.length) {
-                    return options[idx];
-                  }
-                  // Otherwise use the value directly
-                  return a;
-                })
-                .filter((a: any) => a && a.trim() !== '');
-
-              if (validAnswers.length > 0) {
-                questionData.correctAnswer = validAnswers[0];
-              } else {
-                questionData.correctAnswer = '';
-              }
-            } else {
-              questionData.correctAnswer = '';
-            }
-          } else {
-            // For other question types (true_false), correctAnswer is required
-            const answerValue: any = q.correctAnswer;
-            if (Array.isArray(answerValue)) {
-              const validAnswers = answerValue.filter((a: any) => a && a.trim() !== '');
-              if (validAnswers.length > 0) {
-                questionData.correctAnswer = validAnswers[0];
-              } else {
-                questionData.correctAnswer = '';
-              }
-            } else if (answerValue && typeof answerValue === 'string' && answerValue.trim() !== '') {
-              questionData.correctAnswer = answerValue.trim();
-            } else {
-              questionData.correctAnswer = '';
-            }
-          }
-
-          return questionData;
-        });
-      }
-
-      // Copy scoring map (New API format)
-      // Important: Only copy scoring if it matches the number of questions
-      const totalQuestions = quizData.questions?.length || 0;
-      if (scoringMap.length > 0 && totalQuestions > 0) {
-        // Check if scoring map is complete for the number of questions
-        const maxCorrectAnswer = Math.max(...scoringMap.map(s => s.correctAnswer));
-
-        if (maxCorrectAnswer >= totalQuestions) {
-          // Scoring map is complete, copy it with actual score values
-          quizData.scoringTemplates = scoringMap
-            .filter(s => s.correctAnswer <= totalQuestions) // Only copy templates up to total questions
-            .map(s => ({
-              correctAnswers: s.correctAnswer,
-              points: s.score  // Send score directly as points
-            }));
-        } else {
-          // Scoring incomplete, show warning but continue without scoring
-          console.warn(`Scoring map incomplete: max ${maxCorrectAnswer}, need ${totalQuestions}`);
-          // Don't copy scoring templates - let user generate new ones
-        }
-      }
-
-      // Create new quiz
-      const result = await API.quizzes.createQuiz(quizData);
+      });
 
       if (result.success) {
         setShowCopyDialog(false);
 
-        // Check if scoring was copied
-        const scoringCopied = quizData.scoringTemplates && quizData.scoringTemplates.length > 0;
-        const successMsg = scoringCopied
-          ? 'Quiz berhasil di-copy sebagai template baru!'
-          : 'Quiz berhasil di-copy sebagai template baru!\n\n⚠️ Scoring template tidak di-copy karena jumlah soal berbeda. Silakan generate scoring template baru di tab Scoring.';
+        const successMsg = 'Quiz berhasil di-copy sebagai template baru! Semua gambar dan scoring template juga di-copy otomatis.';
 
         setDialogType('success');
         setDialogMessage(successMsg);
@@ -1147,9 +1053,9 @@ export default function QuizDetailPage({ params }: PageProps) {
               <div>
                 <Label htmlFor="location">Lokasi</Label>
                 <Select
-                  value={formData.locationKey || "none"}
+                  value={formData.locationKey || ""}
                   onValueChange={(value) => {
-                    setFormData({ ...formData, locationKey: value === "none" ? "" : value });
+                    setFormData({ ...formData, locationKey: value });
                     setHasUnsavedChanges(true);
                   }}
                 >
@@ -1157,7 +1063,6 @@ export default function QuizDetailPage({ params }: PageProps) {
                     <SelectValue placeholder="Pilih Lokasi" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Semua Lokasi</SelectItem>
                     {locationOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -1170,9 +1075,9 @@ export default function QuizDetailPage({ params }: PageProps) {
               <div>
                 <Label htmlFor="service">Service</Label>
                 <Select
-                  value={formData.serviceKey || "none"}
+                  value={formData.serviceKey || ""}
                   onValueChange={(value) => {
-                    setFormData({ ...formData, serviceKey: value === "none" ? "" : value });
+                    setFormData({ ...formData, serviceKey: value });
                     setHasUnsavedChanges(true);
                   }}
                 >
@@ -1180,7 +1085,6 @@ export default function QuizDetailPage({ params }: PageProps) {
                     <SelectValue placeholder="Pilih Service" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Semua Service</SelectItem>
                     {serviceOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -1989,7 +1893,7 @@ export default function QuizDetailPage({ params }: PageProps) {
                   onImageSelect={(base64, filename) => {
                     const currentImageCount = (editingQuestion.images?.length || 0) + (editingQuestion.imagesBase64?.length || 0);
                     const newSequence = currentImageCount + 1;
-                    
+                     
                     const newImage = {
                       imageBase64: base64,
                       originalName: filename,
@@ -2238,14 +2142,13 @@ export default function QuizDetailPage({ params }: PageProps) {
             <div>
               <Label htmlFor="copyLocation">Location</Label>
               <Select
-                value={copyFormData.locationKey || "none"}
-                onValueChange={(value) => setCopyFormData({ ...copyFormData, locationKey: value === "none" ? "" : value })}
+                value={copyFormData.locationKey || ""}
+                onValueChange={(value) => setCopyFormData({ ...copyFormData, locationKey: value })}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Pilih Lokasi" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Semua Lokasi</SelectItem>
                   {locationOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
@@ -2258,14 +2161,13 @@ export default function QuizDetailPage({ params }: PageProps) {
             <div>
               <Label htmlFor="copyService">Service</Label>
               <Select
-                value={copyFormData.serviceKey || "none"}
-                onValueChange={(value) => setCopyFormData({ ...copyFormData, serviceKey: value === "none" ? "" : value })}
+                value={copyFormData.serviceKey || ""}
+                onValueChange={(value) => setCopyFormData({ ...copyFormData, serviceKey: value })}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Pilih Service" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Semua Service</SelectItem>
                   {serviceOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
