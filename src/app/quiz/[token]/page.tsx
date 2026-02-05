@@ -591,17 +591,25 @@ export default function PublicQuizPage() {
         // Save submission to localStorage to prevent duplicate attempts
         const submissionKey = `quiz_${token}_${participantInfo.nij}`;
         localStorage.setItem(submissionKey, 'true');
-        
+
+        // Get submittedAt from response for display
+        const submittedAt = response.data?.submittedAt;
+
         // Show completion page
-        const message = isAutoSubmit 
+        const message = isAutoSubmit
           ? `Waktu habis! Quiz telah di-submit otomatis. ${answeredCount} dari ${questions.length} pertanyaan terjawab.`
           : `Anda telah menyelesaikan quiz. ${answeredCount} dari ${questions.length} pertanyaan terjawab.`;
-        
+
         setCompletionMessage(message);
         setQuizCompleted(true);
         setShowQuiz(false);
         setTimeLeft(null); // Reset timer
         setError(null);
+
+        // Log submission timestamp for debugging
+        if (submittedAt) {
+          console.log('Quiz submitted at:', submittedAt);
+        }
       } else {
         setError('Gagal mengirim jawaban. Silakan coba lagi.');
       }
@@ -629,47 +637,21 @@ export default function PublicQuizPage() {
     }
   };
 
+  // Calculate answered count - available for all rendering sections
+  const answeredCount = Object.keys(currentAnswers).filter(key => {
+    const answer = currentAnswers[parseInt(key)];
+    if (Array.isArray(answer)) {
+      return answer.length > 0;
+    }
+    return answer?.toString().trim().length > 0;
+  }).length;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading quiz...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !quiz) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl">⚠️</span>
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Oops!</h2>
-            <p className="text-red-600 mb-4">{error || 'Quiz not found'}</p>
-            <p className="text-gray-600 text-sm mb-6">
-              Silakan hubungi administrator untuk mendapatkan link quiz yang valid.
-            </p>
-            <button
-              onClick={() => {
-                setError(null);
-                setHasSubmittedBefore(false);
-                setParticipantInfo({
-                  name: '',
-                  email: '',
-                  nij: '',
-                  servoNumber: '',
-                  serviceKey: ''
-                });
-              }}
-              className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors"
-            >
-              ← Kembali ke Form
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -718,16 +700,47 @@ export default function PublicQuizPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{quiz.title}</h1>
-            <p className="text-gray-600">{quiz.description}</p>
-            <div className="mt-4 text-sm text-gray-500">
-              <p>⏱️ Waktu: {quiz.durationMinutes || 60} menit</p>
-              <p>📝 Jumlah pertanyaan: {questions.length}</p>
+          {error && (
+            <div className="mb-6 rounded-lg border-2 border-red-400 bg-red-50 p-4">
+              <div className="flex items-start gap-3">
+                <div className="text-red-600 text-2xl">⚠️</div>
+                <div className="flex-1">
+                  <p className="font-semibold text-red-900 mb-2">Error Loading Quiz</p>
+                  <p className="text-red-700 text-sm mb-3">{error}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      loadQuiz();
+                    }}
+                    className="text-red-700 hover:text-red-900 font-medium text-sm underline"
+                  >
+                    Coba Lagi
+                  </button>
+                </div>
+              </div>
             </div>
+          )}
+
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{quiz?.title || 'Loading...'}</h1>
+            <p className="text-gray-600">{quiz?.description || ''}</p>
+            {quiz && (
+              <div className="mt-4 text-sm text-gray-500">
+                <p>⏱️ Waktu: {quiz.durationMinutes || 60} menit</p>
+                <p>📝 Jumlah pertanyaan: {questions.length}</p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">
+            {!quiz && (
+              <div className="text-center py-4 text-gray-500">
+                Loading quiz data...
+              </div>
+            )}
+            {quiz && (
+              <>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 NIJ *
@@ -754,8 +767,8 @@ export default function PublicQuizPage() {
                   }
                 }}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-                  validationErrors.nij 
-                    ? 'border-red-300 focus:ring-red-500' 
+                  validationErrors.nij
+                    ? 'border-red-300 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-blue-500'
                 }`}
                 placeholder="Masukkan NIJ Anda"
@@ -899,6 +912,8 @@ export default function PublicQuizPage() {
             >
               {isStarting ? 'Memulai Quiz...' : hasSubmittedBefore ? 'Sudah Pernah Dikerjakan' : 'Mulai Quiz'}
             </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -943,7 +958,7 @@ export default function PublicQuizPage() {
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
                   <p className="text-sm text-blue-900">
-                    <strong>⏱️ Durasi Quiz: {quiz.durationMinutes || 60} menit</strong>
+                    <strong>⏱️ Durasi Quiz: {quiz?.durationMinutes || 60} menit</strong>
                   </p>
                   <p className="text-xs text-blue-700 mt-1">
                     📝 {questions.length} pertanyaan
@@ -973,13 +988,15 @@ export default function PublicQuizPage() {
   }
 
   // Show all questions at once (no pagination)
-  const answeredCount = Object.keys(currentAnswers).filter(key => {
-    const answer = currentAnswers[parseInt(key)];
-    if (Array.isArray(answer)) {
-      return answer.length > 0;
-    }
-    return answer?.toString().trim().length > 0;
-  }).length;
+  if (!quiz) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Loading quiz...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -988,7 +1005,7 @@ export default function PublicQuizPage() {
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
             <div className="flex-1 min-w-0">
-              <h1 className="text-base sm:text-xl font-semibold text-gray-900 truncate">{quiz.title}</h1>
+              <h1 className="text-base sm:text-xl font-semibold text-gray-900 truncate">{quiz!.title}</h1>
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-600 mt-1">
                 <div className="flex items-center gap-2 sm:gap-4">
                   <span>Q {currentQuestionIndex + 1}/{questions.length}</span>

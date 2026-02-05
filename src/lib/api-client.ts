@@ -19,14 +19,18 @@ import {
   UpdateSessionTimeDto
 } from '@/types/api';
 import { API_BASE_URL } from './constants/api';
+import { withRetry } from './retry-client';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Base API client with standardized response handling
+ * Base API client with standardized response handling, retry logic, and idempotency
  */
 export class BaseApiClient {
   protected static async request<T>(
     endpoint: string, 
-    options: RequestInit = {}
+    options: RequestInit = {},
+    enableRetry: boolean = false,
+    useIdempotency: boolean = false
   ): Promise<ApiResponse<T>> {
     const url = `${API_BASE_URL}${endpoint}`;
     
@@ -40,52 +44,90 @@ export class BaseApiClient {
     const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') : null;
     const token = localToken || sessionToken;
     
-
-    
-
-    
     if (token) {
       defaultHeaders['Authorization'] = `Bearer ${token}`;
     }
 
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          ...defaultHeaders,
-          ...options.headers,
+    // Add idempotency key for write operations (POST, PUT, DELETE) if enabled
+    if (useIdempotency && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE')) {
+      // Generate or retrieve idempotency key
+      const idempotencyKey = uuidv4();
+      defaultHeaders['Idempotency-Key'] = idempotencyKey;
+    }
+
+    const executeRequest = async (): Promise<ApiResponse<T>> => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...defaultHeaders,
+            ...options.headers,
+          },
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        const responseData: ApiResponse<T> = await response.json();
+        
+        // Only log successful responses to reduce console noise
+        if (response.ok && responseData.success) {
+        }
+
+        // Only throw for actual HTTP errors (4xx, 5xx), not for success:false with 200
+        if (!response.ok) {
+          const apiError = new ApiError(
+            responseData.message || `HTTP Error: ${response.status}`,
+            responseData.errors,
+            responseData.statusCode || response.status,
+            responseData.path
+          );
+          
+          // Enhance error with status code for retry logic
+          (apiError as any).statusCode = response.status;
+          throw apiError;
+        }
+        
+        // For HTTP 200 with success:false, let frontend handle it normally
+        // This way backend validation errors don't throw exceptions
+
+        return responseData;
+      } catch (error) {
+        if (error instanceof ApiError) {
+          throw error;
+        }
+        
+        // Handle abort/timeout
+        if (error instanceof Error && error.name === 'AbortError') {
+          const timeoutError = new ApiError('Request timeout - server is taking too long to respond');
+          (timeoutError as any).statusCode = 408;
+          throw timeoutError;
+        }
+        
+        const networkError = new ApiError(
+          error instanceof Error ? error.message : 'Network error occurred'
+        );
+        (networkError as any).statusCode = 0; // Network error
+        throw networkError;
+      }
+    };
+
+    // Use retry mechanism if enabled
+    if (enableRetry) {
+      return withRetry(executeRequest, {
+        maxAttempts: 3,
+        initialDelayMs: 1000,
+        maxDelayMs: 5000,
+        onRetry: (attempt, error) => {
+          console.warn(`Retrying request (attempt ${attempt}/3):`, endpoint, error.message);
         },
       });
-
-      const responseData: ApiResponse<T> = await response.json();
-      
-      // Only log successful responses to reduce console noise
-      if (response.ok && responseData.success) {
-      }
-
-      // Only throw for actual HTTP errors (4xx, 5xx), not for success:false with 200
-      if (!response.ok) {
-        throw new ApiError(
-          responseData.message || `HTTP Error: ${response.status}`,
-          responseData.errors,
-          responseData.statusCode || response.status,
-          responseData.path
-        );
-      }
-      
-      // For HTTP 200 with success:false, let frontend handle it normally
-      // This way backend validation errors don't throw exceptions
-
-      return responseData;
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
-      
-      throw new ApiError(
-        error instanceof Error ? error.message : 'Network error occurred'
-      );
     }
+
+    return executeRequest();
   }
 
   protected static buildParams(params: Record<string, any>): string {
@@ -783,10 +825,16 @@ export class PublicAPI extends BaseApiClient {
       answer: string;
     }>;
   }): Promise<ApiResponse<Attempt>> {
-    return this.request<Attempt>(`/public/quiz/${token}/submit`, {
-      method: 'POST',
-      body: JSON.stringify(submitData),
-    });
+    // Enable retry and idempotency for quiz submission - critical operation
+    return this.request<Attempt>(
+      `/public/quiz/${token}/submit`,
+      {
+        method: 'POST',
+        body: JSON.stringify(submitData),
+      },
+      true,  // Enable retry
+      true   // Enable idempotency
+    );
   }
 
   static async checkQuizSubmission(token: string, checkData: { nij: string; email?: string }): Promise<ApiResponse<any>> {

@@ -5,7 +5,7 @@ import { publicSubmitSchema } from "@/lib/schemas";
 import { Quiz } from "@/types";
 import { useQuizSession, useQuizTimer, useAutoSave, useSessionPersistence } from "@/hooks/useQuizSession";
 import QuizTimer, { TimeWarning } from "@/components/ui/QuizTimer";
-import { AlertTriangle, Clock, Save, RefreshCw } from "lucide-react";
+import { AlertTriangle, Save, RefreshCw } from "lucide-react";
 import { getAbsoluteImageUrl } from "@/lib/constants/api";
 
 interface PublicQuizFormProps {
@@ -187,42 +187,82 @@ export default function PublicQuizForm({ quiz }: PublicQuizFormProps) {
       });
 
       // Validate submission
-      publicSubmitSchema.parse({ 
-        name: participantInfo.name, 
-        nij: participantInfo.nij, 
-        answers 
+      publicSubmitSchema.parse({
+        name: participantInfo.name,
+        nij: participantInfo.nij,
+        answers
       });
 
-      // Complete session if active
-      if (session.sessionStatus === 'ACTIVE') {
-        await session.completeSession();
-      }
+      // Submit to backend API with retry mechanism
+      const { PublicAPI } = await import('@/lib/api-client');
 
-      // TODO: Submit to backend API
-      console.warn('⚠️ Mock data removed - connect to real backend API');
-      
-      // Simulate success for now
-      const result = {
-        success: false,
-        message: 'Backend API not connected. Please configure real backend endpoint.'
+      const submitData = {
+        participantName: participantInfo.name,
+        email: participantInfo.email || `${participantInfo.nij}@temp.local`,
+        nij: participantInfo.nij,
+        servoNumber: participantInfo.servoNumber,
+        serviceKey: participantInfo.serviceKey,
+        quizId: Number(quiz.id),
+        answers: answers.map(a => ({
+          questionId: Number(a.questionId),
+          answer: a.answerText
+        }))
       };
 
-      setSubmitted(true);
-      setMessage(autoSubmit ? 
-        `${result.message} (Waktu habis - jawaban disimpan otomatis)` : 
-        result.message
-      );
-      
-      // Clear saved progress
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem(`quiz_progress_${quiz.id}`);
+      const result = await PublicAPI.submitQuiz(quiz.linkToken || '', submitData);
+
+      if (result.success) {
+        // Complete session ONLY after successful submission
+        if (session.sessionStatus === 'ACTIVE') {
+          await session.completeSession();
+        }
+
+        setSubmitted(true);
+        setMessage(autoSubmit ?
+          `Jawaban berhasil disimpan! (Waktu habis - jawaban disimpan otomatis)` :
+          'Jawaban Anda berhasil disimpan. Terima kasih telah mengikuti quiz!'
+        );
+
+        // Clear saved progress
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(`quiz_progress_${quiz.id}`);
+        }
+
+        setSelectedAnswers({});
+        setMultiSelectAnswers({});
+      } else {
+        throw new Error(result.message || 'Gagal menyimpan jawaban');
       }
-      
-      setSelectedAnswers({});
-      setMultiSelectAnswers({});
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Submit failed";
+      let errorMessage = "Gagal mengirim jawaban. Silakan periksa koneksi dan coba lagi.";
+
+      if (err instanceof Error) {
+        console.error('Submission error details:', {
+          message: err.message,
+          name: err.name,
+          stack: err.stack
+        });
+
+        // Handle specific error types
+        if (err.message.includes('Invalid quiz link') || err.message.includes('quiz link')) {
+          errorMessage = "Link quiz tidak valid. Silakan hubungi administrator untuk mendapatkan link yang benar.";
+        } else if (err.message.includes('already submitted') || err.message.includes('sudah')) {
+          errorMessage = err.message;
+        } else if (err.message.includes('Failed after') && err.message.includes('fetch')) {
+          errorMessage = "Gagal menghubungi server. Periksa koneksi internet Anda dan coba lagi.";
+        } else if (err.message.includes('timeout')) {
+          errorMessage = "Koneksi timeout. Periksa koneksi internet Anda dan coba lagi.";
+        } else if (err.message.includes('429')) {
+          errorMessage = "Server sedang sibuk. Tunggu sebentar dan coba lagi.";
+        } else if (err.message.includes('Network')) {
+          errorMessage = "Masalah koneksi. Periksa internet Anda dan coba lagi.";
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      }
+
       setError(errorMessage);
+      console.error('Quiz submission error:', err);
     } finally {
       setLoading(false);
     }
@@ -400,6 +440,27 @@ export default function PublicQuizForm({ quiz }: PublicQuizFormProps) {
         />
       )}
 
+      {/* Error Message - Prominent Display */}
+      {error && (
+        <div className="rounded-lg border-2 border-red-400 bg-red-50 p-4 md:p-6 sticky top-16 z-20 shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 text-red-600 text-xl">⚠️</div>
+            <div className="flex-1">
+              <p className="font-semibold text-red-900 mb-2">Gagal Mengirim Jawaban</p>
+              <p className="text-red-700 text-sm mb-3">{error}</p>
+              <button
+                type="button"
+                onClick={() => handleSubmit()}
+                disabled={loading}
+                className="text-red-700 hover:text-red-900 font-medium text-sm underline disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Mencoba lagi..." : "Coba lagi"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Time Warnings */}
       {timeWarnings.map(minutes => (
         <TimeWarning
@@ -526,12 +587,12 @@ export default function PublicQuizForm({ quiz }: PublicQuizFormProps) {
         ))}
       </div>
 
-      {(error || saveError) && (
+      {saveError && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-700">{error || saveError}</p>
+          <p className="text-sm text-red-700">{saveError}</p>
         </div>
       )}
-      
+
       <div className="flex justify-between items-center pt-4">
         <div className="flex gap-3">
           {currentPage > 1 && (
