@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { publicSubmitSchema } from "@/lib/schemas";
 import { Quiz } from "@/types";
 import { useQuizSession, useQuizTimer, useAutoSave, useSessionPersistence } from "@/hooks/useQuizSession";
+import { useScreenshotPrevention } from "@/hooks/useScreenshotPrevention";
 import QuizTimer, { TimeWarning } from "@/components/ui/QuizTimer";
 import { AlertTriangle, Save, RefreshCw } from "lucide-react";
 import { getAbsoluteImageUrl } from "@/lib/constants/api";
@@ -28,6 +29,12 @@ export default function PublicQuizForm({ quiz }: PublicQuizFormProps) {
   const session = useQuizSession();
   const timer = useQuizTimer();
   const { isRestoring, hasActiveSession } = useSessionPersistence();
+
+  // Anti-screenshot prevention
+  useScreenshotPrevention({
+    participantName: participantInfo.name,
+    nij: participantInfo.nij,
+  });
 
   // Auto-save functionality
   const { lastSaved, isSaving, saveError, manualSave } = useAutoSave(
