@@ -10,6 +10,7 @@ export function useScreenshotPrevention({ participantName, nij }: UseScreenshotP
   const blurTimeRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    console.log('[Screenshot Prevention] Initialized for:', { participantName, nij });
     // Prevent Print Screen key
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = e.key;
@@ -17,6 +18,7 @@ export function useScreenshotPrevention({ participantName, nij }: UseScreenshotP
 
       // Block Print Screen
       if (code === 'PrintScreen') {
+        console.warn('[Screenshot Prevention] Print Screen key detected!');
         e.preventDefault();
         screenshotDetectedRef.current = true;
         triggerScreenshotAlert('Print Screen detected');
@@ -25,6 +27,7 @@ export function useScreenshotPrevention({ participantName, nij }: UseScreenshotP
 
       // Block F12 (Developer Tools)
       if (key === 'F12' || code === 'F12') {
+        console.warn('[Screenshot Prevention] F12 DevTools blocked');
         e.preventDefault();
         return false;
       }
@@ -80,6 +83,7 @@ export function useScreenshotPrevention({ participantName, nij }: UseScreenshotP
 
     // Detect when window loses focus (screenshot often triggers this on mobile)
     const handleWindowBlur = () => {
+      console.warn('[Screenshot Prevention] Window blur detected - possible screenshot attempt');
       screenshotDetectedRef.current = true;
       triggerScreenshotAlert('Window focus lost - screenshot attempt detected');
 
@@ -133,6 +137,7 @@ export function useScreenshotPrevention({ participantName, nij }: UseScreenshotP
 
     // Add watermark if participant info provided
     if (participantName || nij) {
+      console.log('[Screenshot Prevention] Adding watermark for:', { participantName, nij });
       addWatermark(participantName, nij);
     }
 
@@ -154,7 +159,8 @@ export function useScreenshotPrevention({ participantName, nij }: UseScreenshotP
 }
 
 function triggerScreenshotAlert(message: string) {
-  console.warn(message);
+  console.warn('[Screenshot Alert]', message);
+  console.log('[Screenshot Alert] Timestamp:', new Date().toISOString());
 
   // Show visual alert on the page
   const alertDiv = document.createElement('div');
