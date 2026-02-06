@@ -7,7 +7,7 @@ interface UseScreenshotPreventionProps {
 
 export function useScreenshotPrevention({ participantName, nij }: UseScreenshotPreventionProps = {}) {
   const screenshotDetectedRef = useRef(false);
-  const blurTimeRef = useRef<NodeJS.Timeout>();
+  const blurTimeRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Prevent Print Screen key
