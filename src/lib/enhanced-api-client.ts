@@ -226,7 +226,7 @@ export class EnhancedApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit & { timeout?: number } = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
     
@@ -241,18 +241,33 @@ export class EnhancedApiClient {
       ...options.headers,
     };
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    // Add timeout support (default 10 seconds)
+    const timeout = options.timeout || 10000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-    const result: ApiResponse<T> = await response.json();
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
 
-    if (!result.success) {
-      throw new ApiError(result.message, result.errors, result.statusCode);
+      const result: ApiResponse<T> = await response.json();
+
+      if (!result.success) {
+        throw new ApiError(result.message, result.errors, result.statusCode);
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ApiError('Request timeout', [], 408);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    return result;
   }
 
   // Query builder helper
