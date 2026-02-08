@@ -20,10 +20,21 @@ export async function POST(
     }
 
     // Validate required fields
-    if (!body.participantName || !body.email || !body.nij) {
+    if (!body.email) {
       const response: ApiResponse = {
         success: false,
-        message: 'Participant name, email, and NIJ are required',
+        message: 'Email is required',
+        statusCode: 400,
+        timestamp: new Date().toISOString()
+      };
+      return NextResponse.json(response, { status: 400 });
+    }
+
+    // Validate NIJ length if provided
+    if (body.nij && body.nij.length < 6) {
+      const response: ApiResponse = {
+        success: false,
+        message: 'NIJ must be at least 6 digits',
         statusCode: 400,
         timestamp: new Date().toISOString()
       };

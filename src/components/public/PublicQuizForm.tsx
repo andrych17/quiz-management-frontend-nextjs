@@ -139,8 +139,12 @@ export default function PublicQuizForm({ quiz }: PublicQuizFormProps) {
     
     try {
       // Validate participant info
-      if (!name || !nij) {
-        throw new Error("Name and NIJ are required");
+      if (!email) {
+        throw new Error("Email is required");
+      }
+      
+      if (nij && nij.length < 6) {
+        throw new Error("NIJ must be at least 6 digits");
       }
       
       setParticipantInfo({ name, nij, email, servoNumber, serviceKey: "" });

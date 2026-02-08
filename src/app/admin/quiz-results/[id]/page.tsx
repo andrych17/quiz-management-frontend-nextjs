@@ -6,6 +6,7 @@ import { formatDateTime } from '@/lib/date';
 import { API } from '@/lib/api-client';
 import BasePageLayout from '@/components/ui/layout/BasePageLayout';
 import { Button } from '@/components/ui/button';
+import { getAbsoluteImageUrl } from '@/lib/constants/api';
 
 
 interface QuizAnswer {
@@ -19,6 +20,16 @@ interface QuizAnswer {
   isCorrect: boolean;
   points?: number;
   feedback?: string;
+  images?: Array<{
+    id: number;
+    sequence: number;
+    fileName: string;
+    downloadUrl: string;
+    originalName: string;
+    mimeType?: string;
+    fileSize?: number;
+    altText?: string;
+  }>;
 }
 
 interface QuizResultDetail {
@@ -360,6 +371,47 @@ export default function QuizResultDetailPage() {
 
               <div className="mb-4">
                 <p className="text-gray-900 mb-3">{answer.questionText}</p>
+                
+                {/* Display images if available */}
+                {answer.images && answer.images.length > 0 && (
+                  <div className="mt-4 mb-4">
+                    <div className={`grid gap-3 ${
+                      answer.images.length === 1 
+                        ? 'grid-cols-1' 
+                        : answer.images.length === 2 
+                          ? 'grid-cols-2' 
+                          : 'grid-cols-2 sm:grid-cols-3'
+                    }`}>
+                      {answer.images
+                        .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
+                        .map((image, imgIndex) => (
+                          <div key={image.id || imgIndex} className="relative">
+                            <img 
+                              src={getAbsoluteImageUrl(image.downloadUrl)} 
+                              alt={image.altText || `Question ${answer.questionNumber} image ${imgIndex + 1}`}
+                              className="rounded-lg shadow-md w-full h-auto max-h-64 object-contain bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity"
+                              loading="lazy"
+                              onClick={() => {
+                                const imageUrl = getAbsoluteImageUrl(image.downloadUrl);
+                                if (imageUrl) {
+                                  window.open(imageUrl, '_blank');
+                                }
+                              }}
+                              title="Klik untuk memperbesar"
+                            />
+                            {image.altText && (
+                              <p className="text-xs text-gray-500 mt-1 text-center">{image.altText}</p>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                    {answer.images.length > 1 && (
+                      <p className="text-xs text-gray-400 mt-2 text-center">
+                        📷 {answer.images.length} gambar - klik untuk memperbesar
+                      </p>
+                    )}
+                  </div>
+                )}
                 
                 {/* Show options for multiple choice questions */}
                 {(answer.questionType === 'multiple_choice' || answer.questionType === 'multiple-choice') && answer.questionOptions.length > 0 && (

@@ -909,7 +909,7 @@ export default function QuizDetailPage({ params }: PageProps) {
     // Check if there's existing scoring data
     if (scoringMap.length > 0) {
       const confirmed = window.confirm(
-        `Anda sudah memiliki ${scoringMap.length} data scoring. Generate Skor Konversi IQ akan MENGHAPUS semua data scoring yang ada dan menggantinya dengan template baru (0-35 jawaban benar, berdasarkan tabel konversi standar). Lanjutkan?`
+        `Anda sudah memiliki ${scoringMap.length} data scoring. Generate Skor Konversi IQ akan MENGHAPUS semua data scoring yang ada dan menggantinya dengan template baru (0-40 jawaban benar, berdasarkan tabel konversi standar). Lanjutkan?`
       );
       if (!confirmed) {
         return;
@@ -920,19 +920,62 @@ export default function QuizDetailPage({ params }: PageProps) {
     setScoringMap([]);
 
     // Generate IQ conversion scoring template based on standard conversion table
+    // Template ini sesuai dengan migration: update-iq-quiz-scoring.sql
     const iqConversionScoring = [
-      { correctAnswer: 0, score: 0 }, { correctAnswer: 1, score: 73 }, { correctAnswer: 2, score: 74 },
-      { correctAnswer: 3, score: 72 }, { correctAnswer: 4, score: 72 }, { correctAnswer: 5, score: 75 },
-      { correctAnswer: 6, score: 72 }, { correctAnswer: 7, score: 70 }, { correctAnswer: 8, score: 80 },
-      { correctAnswer: 9, score: 81 }, { correctAnswer: 10, score: 80 }, { correctAnswer: 11, score: 88 },
-      { correctAnswer: 12, score: 84 }, { correctAnswer: 13, score: 91 }, { correctAnswer: 14, score: 98 },
-      { correctAnswer: 15, score: 90 }, { correctAnswer: 16, score: 96 }, { correctAnswer: 17, score: 102 },
-      { correctAnswer: 18, score: 90 }, { correctAnswer: 19, score: 95 }, { correctAnswer: 20, score: 100 },
-      { correctAnswer: 21, score: 105 }, { correctAnswer: 22, score: 110 }, { correctAnswer: 23, score: 115 },
-      { correctAnswer: 24, score: 120 }, { correctAnswer: 25, score: 100 }, { correctAnswer: 26, score: 104 },
-      { correctAnswer: 27, score: 108 }, { correctAnswer: 28, score: 112 }, { correctAnswer: 29, score: 116 },
-      { correctAnswer: 30, score: 120 }, { correctAnswer: 31, score: 124 }, { correctAnswer: 32, score: 128 },
-      { correctAnswer: 33, score: 132 }, { correctAnswer: 34, score: 136 }, { correctAnswer: 35, score: 140 },
+      // 0-7 correct = 73 IQ
+      { correctAnswer: 0, score: 73 },
+      { correctAnswer: 1, score: 73 },
+      { correctAnswer: 2, score: 73 },
+      { correctAnswer: 3, score: 73 },
+      { correctAnswer: 4, score: 73 },
+      { correctAnswer: 5, score: 73 },
+      { correctAnswer: 6, score: 73 },
+      { correctAnswer: 7, score: 73 },
+      // 8 correct = 77 IQ
+      { correctAnswer: 8, score: 77 },
+      // 9 correct = 79 IQ
+      { correctAnswer: 9, score: 79 },
+      // 10-11 correct = 84 IQ
+      { correctAnswer: 10, score: 84 },
+      { correctAnswer: 11, score: 84 },
+      // 12-13 correct = 88 IQ
+      { correctAnswer: 12, score: 88 },
+      { correctAnswer: 13, score: 88 },
+      // 14-15 correct = 92 IQ
+      { correctAnswer: 14, score: 92 },
+      { correctAnswer: 15, score: 92 },
+      // 16-17 correct = 94 IQ
+      { correctAnswer: 16, score: 94 },
+      { correctAnswer: 17, score: 94 },
+      // 18-19 correct = 98 IQ
+      { correctAnswer: 18, score: 98 },
+      { correctAnswer: 19, score: 98 },
+      // 20-21 correct = 101 IQ
+      { correctAnswer: 20, score: 101 },
+      { correctAnswer: 21, score: 101 },
+      // 22-23 correct = 104 IQ
+      { correctAnswer: 22, score: 104 },
+      { correctAnswer: 23, score: 104 },
+      // 24-25 correct = 108 IQ
+      { correctAnswer: 24, score: 108 },
+      { correctAnswer: 25, score: 108 },
+      // 26-27 correct = 112 IQ
+      { correctAnswer: 26, score: 112 },
+      { correctAnswer: 27, score: 112 },
+      // 28-29 correct = 116 IQ
+      { correctAnswer: 28, score: 116 },
+      { correctAnswer: 29, score: 116 },
+      // 30-31 correct = 120 IQ
+      { correctAnswer: 30, score: 120 },
+      { correctAnswer: 31, score: 120 },
+      // 32 correct = 123 IQ
+      { correctAnswer: 32, score: 123 },
+      // 33 correct = 125 IQ
+      { correctAnswer: 33, score: 125 },
+      // 34 correct = 132 IQ
+      { correctAnswer: 34, score: 132 },
+      // 35-40 correct = 139 IQ
+      { correctAnswer: 35, score: 139 }
     ];
 
     // Replace with new scoring data
