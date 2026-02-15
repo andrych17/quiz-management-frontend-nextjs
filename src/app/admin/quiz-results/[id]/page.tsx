@@ -76,9 +76,24 @@ export default function QuizResultDetailPage() {
   const [result, setResult] = useState<QuizResultDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [serviceConfigs, setServiceConfigs] = useState<Array<{key: string, value: string}>>([]);
 
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Load service configs for name lookup
+  useEffect(() => {
+    const loadServiceConfigs = async () => {
+      try {
+        const response = await API.config.getServiceConfigs();
+        if (response?.data) {
+          setServiceConfigs(Array.isArray(response.data) ? response.data : []);
+        }
+      } catch (err) {
+        console.error('Failed to load service configs:', err);
+      }
+    };
+    loadServiceConfigs();
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -139,9 +154,14 @@ export default function QuizResultDetailPage() {
 
 
   const getAnswerBadgeColor = (isCorrect: boolean) => {
-    return isCorrect 
+    return isCorrect
       ? 'bg-green-100 text-green-800 border-green-200'
       : 'bg-red-100 text-red-800 border-red-200';
+  };
+
+  const getServiceName = (serviceKey: string) => {
+    const service = serviceConfigs.find(s => s.key === serviceKey);
+    return service?.value || serviceKey;
   };
 
   if (!result && !loading) {
@@ -217,137 +237,116 @@ export default function QuizResultDetailPage() {
             <div>
 
       {/* Result Overview */}
-      <div className="bg-white rounded-lg shadow mb-8">
-        <div className="p-6 border-b">
-           <h2 className="text-lg font-semibold text-gray-900 mb-6">Result Overview</h2>
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8">
-             {/* Participant Info */}
-             <div>
-               <h3 className="text-md font-medium text-gray-900 mb-4 flex items-center">
-                 <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                 </svg>
-                 Participant Information
-               </h3>
-               <div className="space-y-4 pl-7">
-                 <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-1">Name</label>
-                    <p className="text-gray-900 font-medium">{result.participantName}</p>
-                 </div>
-                 <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-1">Email</label>
-                    <p className="text-gray-900">{result.email}</p>
-                 </div>
-                 <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-1">NIJ</label>
-                    <p className="text-gray-900">{result.nij}</p>
-                 </div>
-                 {result.servoNumber && (
-                   <div>
-                      <label className="text-sm font-medium text-gray-500 block mb-1">Servo Number</label>
-                      <p className="text-gray-900">{result.servoNumber}</p>
-                   </div>
-                 )}
-                 {result.serviceKey && (
-                   <div>
-                      <label className="text-sm font-medium text-gray-500 block mb-1">Service Key</label>
-                      <p className="text-gray-900">{result.serviceKey}</p>
-                   </div>
-                 )}
-               </div>
-             </div>
-             
-             {/* Quiz Info */}
-             <div>
-               <h3 className="text-md font-medium text-gray-900 mb-4 flex items-center">
-                 <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                 </svg>
-                 Quiz Information
-               </h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-7">
-                 <div className="col-span-full">
-                    <label className="text-sm font-medium text-gray-500 block mb-1">Title</label>
-                    <p className="text-gray-900 font-medium">{result.quiz.title}</p>
-                 </div>
-                 <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-1">Service</label>
-                    <p className="text-gray-900">{result.quiz.serviceName}</p>
-                 </div>
-                 <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-1">Location</label>
-                    <p className="text-gray-900">{result.quiz.locationName}</p>
-                 </div>
-                 {result.quiz.passingScore && (
-                   <div>
-                      <label className="text-sm font-medium text-gray-500 block mb-1">Syarat Lulus</label>
-                      <p className="text-gray-900">{result.quiz.passingScore}</p>
-                   </div>
-                 )}
-                 <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-1">Created At</label>
-                    <p className="text-gray-900">{formatDateTime(result.quiz.createdAt)}</p>
-                 </div>
-                 <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-1">Started At</label>
-                    <p className="text-gray-900">{formatDateTime(result.startedAt)}</p>
-                 </div>
-                 <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-1">Completed At</label>
-                    <p className="text-gray-900">{result.completedAt ? new Date(result.completedAt).toLocaleString() : '-'}</p>
-                 </div>
-               </div>
-             </div>
-           </div>
-        </div>
+      <div className="bg-white rounded-lg shadow mb-8 p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Participant Info - Compact (Left) */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+              <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Participant
+            </h3>
+            <div className="pl-6 space-y-1.5">
+              <div className="text-sm">
+                <span className="text-gray-600">Name: </span>
+                <span className="font-medium text-gray-900">{result.participantName}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600">Email: </span>
+                <span className="text-gray-900">{result.email}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600">NIJ: </span>
+                <span className="text-gray-900">{result.nij}</span>
+              </div>
+              {result.servoNumber && (
+                <div className="text-sm">
+                  <span className="text-gray-600">Servo: </span>
+                  <span className="text-gray-900">{result.servoNumber}</span>
+                </div>
+              )}
+              {result.serviceKey && (
+                <div className="text-sm">
+                  <span className="text-gray-600">Service: </span>
+                  <span className="text-gray-900">{getServiceName(result.serviceKey)}</span>
+                </div>
+              )}
+            </div>
+          </div>
 
-        {/* Score Summary Section */}
-        <div className="p-6 bg-gray-50 rounded-b-lg">
-             <h3 className="text-md font-medium text-gray-900 mb-6 text-center">Score Summary</h3>
-             <div className="grid grid-cols-2 md:grid-cols-6 gap-4 max-w-6xl mx-auto">
-                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                  <div className={`text-4xl font-bold mb-1 ${result.passed ? 'text-green-600' : 'text-red-600'}`}>{result.score}</div>
-                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Nilai Akhir</p>
-                  {result.grade && (
-                    <p className="text-xs text-gray-600 mt-2 font-medium">{result.grade}</p>
-                  )}
+          {/* Quiz Info - Compact */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+              <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              Quiz
+            </h3>
+            <div className="pl-6 space-y-1.5">
+              <div className="text-sm">
+                <span className="text-gray-600">Title: </span>
+                <span className="font-medium text-gray-900">{result.quiz.title}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600">Service: </span>
+                <span className="text-gray-900">{result.quiz.serviceName}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600">Location: </span>
+                <span className="text-gray-900">{result.quiz.locationName}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600">Mulai: </span>
+                <span className="text-gray-900">{formatDateTime(result.startedAt)}</span>
+              </div>
+              {result.completedAt && (
+                <div className="text-sm">
+                  <span className="text-gray-600">Selesai: </span>
+                  <span className="text-gray-900">{formatDateTime(result.completedAt)}</span>
                 </div>
-                {result.quiz.passingScore && (
-                  <div className="text-center p-4 bg-white rounded-lg shadow-sm border-2 border-blue-200">
-                    <div className="text-3xl font-semibold text-blue-600 mb-1">{result.quiz.passingScore}</div>
-                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Syarat Lulus</p>
-                  </div>
-                )}
-                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                  <div className="text-3xl font-semibold text-green-600 mb-1">{result.summary.correctAnswers}</div>
-                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Benar</p>
-                </div>
-                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                   <div className="text-3xl font-semibold text-red-600 mb-1">{result.summary.wrongAnswers}</div>
-                   <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Salah</p>
-                </div>
-                {result.summary.skippedAnswers !== undefined && (
-                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                     <div className="text-3xl font-semibold text-yellow-600 mb-1">{result.summary.skippedAnswers}</div>
-                     <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Dilewati</p>
-                  </div>
-                )}
-                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                   <div className="text-3xl font-semibold text-gray-700 mb-1">{result.summary.totalQuestions}</div>
-                   <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Soal</p>
-                </div>
-             </div>
-             
-             <div className="mt-8 flex justify-center">
-               <div className={`flex items-center space-x-2 px-6 py-3 rounded-full border-2 ${
-                 result.passed 
-                   ? 'bg-green-50 border-green-200 text-green-700' 
-                   : 'bg-red-50 border-red-200 text-red-700'
-               }`}>
-                 <span className="text-xl">{result.passed ? '✅' : '❌'}</span>
-                 <span className="font-bold text-lg tracking-wide">{result.passed ? 'LULUS' : 'TIDAK LULUS'}</span>
-               </div>
-             </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Score Summary - Below Overview */}
+      <div className="bg-white rounded-lg shadow mb-6 p-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-6">
+            <div className="flex items-baseline gap-2">
+              <span className={`text-3xl font-bold ${result.passed ? 'text-green-600' : 'text-red-600'}`}>{result.score}</span>
+              {result.grade && (
+                <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">{result.grade}</span>
+              )}
+            </div>
+            {result.quiz.passingScore && (
+              <span className="text-sm text-gray-600">Syarat: <span className="font-semibold text-blue-600">{result.quiz.passingScore}</span></span>
+            )}
+            <span className="text-sm text-gray-600">
+              <span className="font-semibold text-green-600">{result.summary.correctAnswers}</span> Benar
+            </span>
+            <span className="text-sm text-gray-600">
+              <span className="font-semibold text-red-600">{result.summary.wrongAnswers}</span> Salah
+            </span>
+            {result.summary.skippedAnswers !== undefined && (
+              <span className="text-sm text-gray-600">
+                <span className="font-semibold text-yellow-600">{result.summary.skippedAnswers}</span> Dilewati
+              </span>
+            )}
+            <span className="text-sm text-gray-600">
+              <span className="font-semibold text-gray-700">{result.summary.totalQuestions}</span> Total
+            </span>
+          </div>
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
+            result.passed
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-800'
+          }`}>
+            <span>{result.passed ? '✅' : '❌'}</span>
+            <span className="font-bold text-sm">{result.passed ? 'LULUS' : 'TIDAK LULUS'}</span>
+          </div>
         </div>
       </div>
 
@@ -436,7 +435,7 @@ export default function QuizResultDetailPage() {
                           <span className="text-xs font-semibold bg-green-200 text-green-800 px-2 py-0.5 rounded">Correct Answer</span>
                         )}
                         {option === answer.answerText && option !== answer.correctAnswer && (
-                          <span className="text-xs font-semibold bg-red-200 text-red-800 px-2 py-0.5 rounded">Your Answer</span>
+                          <span className="text-xs font-semibold bg-red-200 text-red-800 px-2 py-0.5 rounded">Participant's Answer</span>
                         )}
                       </div>
                     ))}
@@ -455,10 +454,10 @@ export default function QuizResultDetailPage() {
                 )}
               </div>
 
-              {/* Your Answer Section - Moved to bottom */}
+              {/* Participant's Answer Section - Moved to bottom */}
               <div className="mt-6 pt-4 border-t border-gray-100">
                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-gray-500">Your Answer</label>
+                    <label className="text-sm font-medium text-gray-500">Participant's Answer</label>
                     <div className={`p-4 rounded-lg border-l-4 ${
                       answer.isCorrect 
                         ? 'bg-white border-green-500 shadow-sm'
