@@ -1433,9 +1433,9 @@ export default function QuizDetailPage({ params }: PageProps) {
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
                         {formData.scoringMode === 'iq_test' ? (
-                          <>🧠 Mode: <span className="text-purple-700">IQ Test Scoring</span></>
+                          <>🧠 Mode: <span className="text-purple-700">IQ Score</span></>
                         ) : (
-                          <>📊 Mode: <span className="text-blue-700">Standard Scoring</span></>
+                          <>📊 Mode: <span className="text-blue-700">Normal Score</span></>
                         )}
                       </h4>
                       <p className="text-sm text-gray-600">
@@ -1455,8 +1455,8 @@ export default function QuizDetailPage({ params }: PageProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="standard">📊 Standard</SelectItem>
-                        <SelectItem value="iq_test">🧠 IQ Test</SelectItem>
+                        <SelectItem value="standard">📊 Normal Score</SelectItem>
+                        <SelectItem value="iq_test">🧠 IQ Score</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

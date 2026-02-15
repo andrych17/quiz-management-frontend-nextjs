@@ -586,16 +586,8 @@ export default function QuizResultsPage() {
     <BasePageLayout
       title="Quiz Results"
       subtitle="View and manage quiz attempt results"
-    >
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700">{error}</p>
-        </div>
-      )}
-
-      {/* Export Excel Button - Superadmin Only */}
-      {isSuperadmin && results.length > 0 && (
-        <div className="mb-4 flex justify-end">
+      actions={
+        isSuperadmin && results.length > 0 ? (
           <Button
             onClick={handleExportExcel}
             disabled={isExporting || loading}
@@ -618,6 +610,12 @@ export default function QuizResultsPage() {
               </>
             )}
           </Button>
+        ) : undefined
+      }
+    >
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-700">{error}</p>
         </div>
       )}
 

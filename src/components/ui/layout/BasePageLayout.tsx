@@ -57,22 +57,22 @@ export default function BasePageLayout({
       {/* Page Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-full mx-auto">
-          <div className="py-6 px-4 sm:px-6">
+          <div className="py-4 px-4 sm:px-6">
             <div className="flex justify-between items-start">
               <div className="min-w-0 flex-1 pr-4">
-                <div className="flex items-center gap-4 mb-2">
-                  <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+                <div className="flex items-center gap-3 mb-1">
+                  <h1 className="text-xl font-bold text-gray-900">{title}</h1>
                   {badge && (
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getBadgeClasses(badge.variant)}`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getBadgeClasses(badge.variant)}`}>
                       {badge.text}
                     </span>
                   )}
                 </div>
                 {subtitle && (
-                  <p className="text-gray-600 text-lg">{subtitle}</p>
+                  <p className="text-gray-600 text-sm">{subtitle}</p>
                 )}
               </div>
-              
+
               {actions && (
                 <div className="flex items-center gap-3 flex-shrink-0">
                   {actions}
@@ -113,7 +113,7 @@ export default function BasePageLayout({
       </div>
 
       {/* Page Content */}
-      <div className="max-w-full mx-auto py-8">
+      <div className="max-w-full mx-auto py-4">
         {children}
       </div>
     </div>
