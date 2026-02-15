@@ -132,11 +132,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const rememberMe = !!localStorage.getItem('admin_token'); // If token in localStorage, user chose remember me
           
           if (savedToken) {
-            // Optimistic auth: Load user immediately from token, validate in background
-            dispatch({ type: 'SET_LOADING', payload: false });
-            
-            // Validate session with backend in background (with fast timeout)
-            api.getProfile().then((response) => {
+            // Validate session with backend - but don't fail immediately on errors
+            try {
+              const response = await api.getProfile();
               dispatch({
                 type: 'LOGIN_SUCCESS',
                 payload: {
@@ -146,11 +144,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   rememberMe: rememberMe,
                 },
               });
-            }).catch((error) => {
+            } catch (error) {
               console.error('Token validation failed:', error);
-              // Invalid session, logout
-              dispatch({ type: 'LOGOUT' });
-            });
+
+              // Check if it's a network error or auth error
+              const isNetworkError = error instanceof Error &&
+                (error.message.includes('fetch') || error.message.includes('network'));
+
+              if (isNetworkError) {
+                // Network error: Keep user logged in, they can retry
+                console.warn('Network error during token validation - keeping session');
+                dispatch({
+                  type: 'LOGIN_SUCCESS',
+                  payload: {
+                    user: { id: 0, name: 'Loading...', email: '', role: 'user' as const, createdAt: '' },
+                    token: savedToken,
+                    refreshToken: savedRefreshToken || '',
+                    rememberMe: rememberMe,
+                  },
+                });
+              } else {
+                // Auth error: Token is invalid, logout
+                dispatch({ type: 'LOGOUT' });
+              }
+            } finally {
+              dispatch({ type: 'SET_LOADING', payload: false });
+            }
           } else {
             dispatch({ type: 'SET_LOADING', payload: false });
           }
@@ -172,21 +191,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
-  // Token monitoring - watch for token disappearance (reduced frequency)
+  // Token monitoring - watch for token disappearance (very infrequent now)
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const tokenMonitor = setInterval(() => {
       const currentLocalToken = localStorage.getItem('admin_token');
       const currentSessionToken = sessionStorage.getItem('admin_token');
       const hasAnyToken = !!(currentLocalToken || currentSessionToken);
-      
-      if (state.isAuthenticated && !hasAnyToken) {
-        // Force logout if token disappeared
+
+      if (state.isAuthenticated && !hasAnyToken && state.token) {
+        // Only logout if we have state.token but storage is empty (token was manually deleted)
+        console.warn('Token disappeared from storage - logging out');
         dispatch({ type: 'LOGOUT' });
       }
-    }, 30000); // Check every 30 seconds (reduced from 5 seconds)
-    
+    }, 60000); // Check every 60 seconds (reduced from 30 seconds)
+
     return () => clearInterval(tokenMonitor);
   }, [state.isAuthenticated, state.token]);
 

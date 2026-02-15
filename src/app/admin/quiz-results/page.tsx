@@ -23,6 +23,7 @@ interface QuizResult {
   serviceName: string;
   locationName: string;
   score: number;
+  grade?: string;
   passed: boolean;
   startedAt: string;
   completedAt?: string;
@@ -431,7 +432,7 @@ export default function QuizResultsPage() {
       sortable: true,
       render: (value: unknown, row: QuizResult) => {
         const isInProgress = !row.submittedAt && !row.completedAt;
-        
+
         if (isInProgress) {
           return (
             <div className="text-center">
@@ -442,7 +443,7 @@ export default function QuizResultsPage() {
             </div>
           );
         }
-        
+
         return (
           <div className="text-center">
             <div className={`text-lg font-semibold ${
@@ -450,9 +451,14 @@ export default function QuizResultsPage() {
             }`}>
               {row.score}
             </div>
+            {row.grade && (
+              <div className="text-xs text-gray-600 mt-1">
+                {row.grade}
+              </div>
+            )}
             <div className={`text-xs px-2 py-1 rounded-full inline-block mt-1 ${
-              row.passed 
-                ? 'bg-green-100 text-green-800' 
+              row.passed
+                ? 'bg-green-100 text-green-800'
                 : 'bg-red-100 text-red-800'
             }`}>
               {row.passed ? '✅ LULUS' : '❌ TIDAK LULUS'}

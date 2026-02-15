@@ -90,6 +90,7 @@ export interface Quiz {
   token: string;
   serviceType?: string;
   quizType?: 'scheduled' | 'manual';
+  scoringMode?: 'standard' | 'iq_test';
   locationKey?: string;
   locationName?: string;
   location?: {
@@ -175,6 +176,7 @@ export interface Attempt {
   userId?: number;
   userEmail: string;
   score?: number;
+  grade?: string;
   passed?: boolean;
   startedAt: string;
   submittedAt?: string;
@@ -327,6 +329,7 @@ export interface RecentActivity {
   quizId: number;
   quizTitle: string;
   score: number;
+  grade?: string;
   passed: boolean;
   startedAt: string;
   completedAt: string | null;

@@ -49,8 +49,6 @@ export default function QuizzesPage() {
   const userLocationKey = user?.locationKey;
   const userServiceKey = user?.serviceKey;
 
-
-
   const loadQuizzes = useCallback(async (filters: TableFilters = {}, sort?: SortConfig, currentPage: number = DEFAULT_PAGE, isInitialLoad = false) => {
     if (isInitialLoad) {
       setLoading(true);

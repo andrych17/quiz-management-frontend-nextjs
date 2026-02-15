@@ -352,8 +352,13 @@ export default function AdminDashboard() {
                       <p className="text-sm font-bold text-gray-400">-</p>
                     )}
                     <p className={`text-sm font-bold ${activity.passed ? 'text-green-600' : 'text-red-600'}`}>
-                      Score : {activity.score}
+                      Score: {activity.score}
                     </p>
+                    {activity.grade && (
+                      <p className="text-xs font-medium text-gray-700 bg-gray-200 px-2 py-0.5 rounded inline-block">
+                        {activity.grade}
+                      </p>
+                    )}
                     <p className={`text-xs font-medium ${activity.submittedAt ? 'text-green-600' : 'text-yellow-600'}`}>
                       {activity.submittedAt ? 'Completed' : 'In progress'}
                     </p>

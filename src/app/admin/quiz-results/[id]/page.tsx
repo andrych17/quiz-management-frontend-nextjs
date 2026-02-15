@@ -51,6 +51,7 @@ interface QuizResultDetail {
     createdAt?: string;
   };
   score: number;
+  grade?: string;
   passed: boolean;
   startedAt: string;
   completedAt?: string;
@@ -62,6 +63,7 @@ interface QuizResultDetail {
     wrongAnswers: number;
     skippedAnswers?: number;
     scorePercentage: number;
+    grade?: string;
   };
 }
 
@@ -306,6 +308,9 @@ export default function QuizResultDetailPage() {
                 <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                   <div className={`text-4xl font-bold mb-1 ${result.passed ? 'text-green-600' : 'text-red-600'}`}>{result.score}</div>
                   <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Nilai Akhir</p>
+                  {result.grade && (
+                    <p className="text-xs text-gray-600 mt-2 font-medium">{result.grade}</p>
+                  )}
                 </div>
                 {result.quiz.passingScore && (
                   <div className="text-center p-4 bg-white rounded-lg shadow-sm border-2 border-blue-200">

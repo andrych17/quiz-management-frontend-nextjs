@@ -86,6 +86,7 @@ export default function QuizDetailPage({ params }: PageProps) {
     description: '',
     locationKey: '',
     serviceKey: '',
+    scoringMode: 'standard' as 'standard' | 'iq_test',
     passingScore: 60,
     questionsPerPage: 1,
     durationMinutes: 30,
@@ -166,6 +167,15 @@ export default function QuizDetailPage({ params }: PageProps) {
     loadData();
   }, [quizId, isCreateMode]);
 
+  // Auto-sync scoringType with scoringMode
+  useEffect(() => {
+    if (formData.scoringMode === 'iq_test') {
+      setScoringType('iq-conversion');
+    } else {
+      setScoringType('linear');
+    }
+  }, [formData.scoringMode]);
+
   const loadOptions = async () => {
     try {
       setLoading(true);
@@ -236,6 +246,7 @@ export default function QuizDetailPage({ params }: PageProps) {
           description: quizData.description || '',
           locationKey: quizData.locationKey || '',
           serviceKey: quizData.serviceKey || '',
+          scoringMode: quizData.scoringMode || 'standard',
           passingScore: quizData.passingScore || 60,
           questionsPerPage: quizData.questionsPerPage || 1,
           durationMinutes: quizData.durationMinutes || 30,
@@ -1414,131 +1425,78 @@ export default function QuizDetailPage({ params }: PageProps) {
           <div className="space-y-4">
             <div className="space-y-4">
               <div className="mb-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold mb-2">Pemetaan Scoring</h3>
-                    {questions.length > 0 && (
-                      <div className={`text-sm p-3 rounded-lg border ${scoringMap.length === questions.length + 1
-                          ? 'bg-green-50 border-green-200 text-green-800'
-                          : 'bg-yellow-50 border-yellow-200 text-yellow-800'
-                        }`}>
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">
-                            {scoringMap.length === questions.length + 1 ? '✅' : '⚠️'}
-                          </span>
-                          <div>
-                            <p className="font-semibold">
-                              {scoringMap.length === questions.length + 1
-                                ? 'Template Scoring Lengkap'
-                                : 'Template Scoring Belum Lengkap'}
-                            </p>
-                            <p className="text-xs mt-1">
-                              Quiz memiliki <strong>{questions.length} soal</strong>.
-                              {scoringMap.length === questions.length + 1 ? (
-                                <> Sudah ada <strong>{scoringMap.length} template</strong> (0-{questions.length} jawaban benar). ✅</>
-                              ) : (
-                                <> Harus ada <strong>{questions.length + 1} template</strong> (0-{questions.length} jawaban benar), saat ini baru <strong>{scoringMap.length} template</strong>.</>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                <h3 className="text-lg font-semibold mb-4">Pemetaan Scoring</h3>
+
+                {/* Current Scoring Mode & Generate Buttons */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg p-5 mb-4">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                        {formData.scoringMode === 'iq_test' ? (
+                          <>🧠 Mode: <span className="text-purple-700">IQ Test Scoring</span></>
+                        ) : (
+                          <>📊 Mode: <span className="text-blue-700">Standard Scoring</span></>
+                        )}
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {formData.scoringMode === 'iq_test'
+                          ? 'Skor IQ dengan kategori (Borderline, Average, Superior, Gifted). Range: 73-139.'
+                          : 'Skor persentase linear (0-100). Grade: A, B, C, D, E, F.'}
+                      </p>
+                    </div>
+                    <Select
+                      value={formData.scoringMode || "standard"}
+                      onValueChange={(value: 'standard' | 'iq_test') => {
+                        setFormData({ ...formData, scoringMode: value });
+                        setHasUnsavedChanges(true);
+                      }}
+                    >
+                      <SelectTrigger className="w-[200px] bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="standard">📊 Standard</SelectItem>
+                        <SelectItem value="iq_test">🧠 IQ Test</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {formData.scoringMode === 'standard' ? (
+                      <Button
+                        onClick={handleGenerateLinearScoring}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        🔢 Generate Scoring Linear
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleGenerateIQConversionScoring}
+                        size="sm"
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                      >
+                        🧠 Generate Scoring IQ
+                      </Button>
                     )}
-                  </div>
-                </div>
-
-                {/* Scoring Type Selection */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    📊 Tipe Sistem Scoring:
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div
-                      onClick={() => setScoringType('linear')}
-                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${scoringType === 'linear'
-                          ? 'border-blue-500 bg-blue-50 shadow-md'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="radio"
-                          checked={scoringType === 'linear'}
-                          onChange={() => setScoringType('linear')}
-                          className="mt-1"
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 mb-1">Skor Linear</h4>
-                          <p className="text-sm text-gray-600 mb-2">
-                            Persentase (maksimal 100 poin)
-                          </p>
-                          <div className="text-xs text-gray-500 space-y-0.5">
-                            <p>• Formula: (Benar ÷ Total) × 100</p>
-                            <p>• Contoh 10 soal: 5 benar = 50 poin</p>
-                            <p>• Semua benar = 100 poin</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => setScoringType('iq-conversion')}
-                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${scoringType === 'iq-conversion'
-                          ? 'border-blue-500 bg-blue-50 shadow-md'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="radio"
-                          checked={scoringType === 'iq-conversion'}
-                          onChange={() => setScoringType('iq-conversion')}
-                          className="mt-1"
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 mb-1">Skor Konversi IQ</h4>
-                          <p className="text-sm text-gray-600 mb-2">
-                            Berdasarkan tabel konversi standar
-                          </p>
-                          <div className="text-xs text-gray-500 space-y-0.5">
-                            <p>• Range: 73-139</p>
-                            <p>• 0-7 benar = 73-77</p>
-                            <p>• 35 benar = 139</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-2">
-                  {scoringType === 'linear' ? (
                     <Button
-                      onClick={handleGenerateLinearScoring}
+                      onClick={() => {
+                        setEditingScoring({ correctAnswer: scoringMap.length, score: 0 });
+                        setShowScoringDialog(true);
+                      }}
                       size="sm"
                       variant="outline"
-                      className="border-green-600 text-green-700 hover:bg-green-50"
                     >
-                      🔢 Generate Skor Linear (Max 100)
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Manual
                     </Button>
-                  ) : (
-                    <Button
-                      onClick={handleGenerateIQConversionScoring}
-                      size="sm"
-                      variant="outline"
-                      className="border-purple-600 text-purple-700 hover:bg-purple-50"
-                    >
-                      🧠 Generate Skor Konversi IQ (0-35)
-                    </Button>
+                  </div>
+
+                  {scoringMap.length > 0 && (
+                    <p className="text-xs text-gray-600 mt-3 pt-3 border-t border-gray-300">
+                      💡 Ubah mode scoring di atas, lalu tekan <strong>Generate</strong> untuk membuat ulang template sesuai mode baru.
+                    </p>
                   )}
-                  <Button onClick={() => {
-                    setEditingScoring({ correctAnswer: scoringMap.length, score: 0 });
-                    setShowScoringDialog(true);
-                  }} size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Manual
-                  </Button>
                 </div>
               </div>
 
