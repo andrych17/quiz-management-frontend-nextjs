@@ -407,10 +407,9 @@ export default function QuizResultsPage() {
       label: 'Participant',
       sortable: true,
       render: (value: unknown, row: QuizResult) => (
-        <div>
-          <div className="font-medium">{row.participantName}</div>
-          <div className="text-sm text-gray-500">{row.email}</div>
-          <div className="text-xs text-gray-400">NIJ: {row.nij}</div>
+        <div className="text-sm">
+          <span className="font-medium">{row.participantName}</span>
+          <span className="text-gray-600"> | {row.email} | {row.nij}</span>
         </div>
       ),
     },
@@ -419,10 +418,9 @@ export default function QuizResultsPage() {
       label: 'Quiz',
       sortable: true,
       render: (value: unknown, row: QuizResult) => (
-        <div>
-          <div className="font-medium">{row.quizTitle}</div>
-          <div className="text-sm text-gray-500">{row.serviceName}</div>
-          <div className="text-xs text-gray-400">{row.locationName}</div>
+        <div className="text-sm">
+          <span className="font-medium">{row.quizTitle}</span>
+          <span className="text-gray-600"> | {row.serviceName} | {row.locationName}</span>
         </div>
       ),
     },
@@ -435,10 +433,56 @@ export default function QuizResultsPage() {
 
         if (isInProgress) {
           return (
+            <div className="text-center text-sm text-gray-400">-</div>
+          );
+        }
+
+        return (
+          <div className="text-center">
+            <span className={`text-lg font-semibold ${
+              row.passed ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {row.score}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'grade',
+      label: 'Grade',
+      render: (value: unknown, row: QuizResult) => {
+        const isInProgress = !row.submittedAt && !row.completedAt;
+
+        if (isInProgress) {
+          return <div className="text-center text-sm text-gray-400">-</div>;
+        }
+
+        if (!row.grade) {
+          return <div className="text-center text-sm text-gray-400">-</div>;
+        }
+
+        return (
+          <div className="text-center">
+            <span className="text-sm text-gray-700 bg-gray-100 px-2 py-1 rounded">
+              {row.grade}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'passed',
+      label: 'Status',
+      sortable: true,
+      render: (value: unknown, row: QuizResult) => {
+        const isInProgress = !row.submittedAt && !row.completedAt;
+
+        if (isInProgress) {
+          return (
             <div className="text-center">
-              <div className="text-sm text-gray-400">-</div>
-              <div className="text-xs px-2 py-1 rounded-full inline-block mt-1 bg-gray-100 text-gray-500">
-                Sedang dikerjakan
+              <div className="text-xs px-2 py-1 rounded-full inline-block bg-yellow-100 text-yellow-700">
+                🕐 Sedang dikerjakan
               </div>
             </div>
           );
@@ -446,17 +490,7 @@ export default function QuizResultsPage() {
 
         return (
           <div className="text-center">
-            <div className={`text-lg font-semibold ${
-              row.passed ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {row.score}
-            </div>
-            {row.grade && (
-              <div className="text-xs text-gray-600 mt-1">
-                {row.grade}
-              </div>
-            )}
-            <div className={`text-xs px-2 py-1 rounded-full inline-block mt-1 ${
+            <div className={`text-xs px-2 py-1 rounded-full inline-block ${
               row.passed
                 ? 'bg-green-100 text-green-800'
                 : 'bg-red-100 text-red-800'
