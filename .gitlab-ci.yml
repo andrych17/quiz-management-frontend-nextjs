@@ -12,10 +12,10 @@ deploy_production:
     stage: deploy
     before_script:
         - corepack enable
-        - pnpm install --frozen-lockfile
-        - pnpm run build
+        - cp $BUILD_ENV .dev.vars
     script:
-        # Build + deploy ke Cloudflare Workers lewat adapter OpenNext
+        - pnpm run build
+        - pnpm install --frozen-lockfile
         - pnpm run deploy
     only:
         - main # sesuaikan dengan nama branch produksi kamu
