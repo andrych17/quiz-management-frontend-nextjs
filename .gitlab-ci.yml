@@ -14,12 +14,10 @@ deploy_production:
         - corepack enable
         - cp $BUILD_ENV .dev.vars
     script:
-        - pnpm run build
         - pnpm install --frozen-lockfile
+        - pnpm run build
         - pnpm run deploy
     only:
         - main # sesuaikan dengan nama branch produksi kamu
     environment:
         name: prod
-    tags:
-        - docker-cloud
