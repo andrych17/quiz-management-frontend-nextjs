@@ -1,0 +1,27 @@
+image: node:22
+
+stages:
+    - deploy
+
+variables:
+    NODE_ENV: prod
+    PNPM_HOME: /root/.local/share/pnpm
+    PATH: "$PNPM_HOME:$PATH"
+
+before_script:
+    # Aktifkan pnpm via corepack (sudah bundling di Node 22)
+    - corepack enable
+    - pnpm --version
+    # Install dep pakai lockfile (pnpm-lock.yaml)
+    - pnpm install --frozen-lockfile
+
+deploy_production:
+    stage: deploy
+    script:
+        # Build + deploy ke Cloudflare Workers lewat adapter OpenNext
+        - pnpm run deploy
+    only:
+        - main # sesuaikan dengan nama branch produksi kamu
+    environment:
+        name: prod
+    when: on_success
