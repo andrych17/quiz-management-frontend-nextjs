@@ -25,3 +25,5 @@ deploy_production:
     environment:
         name: prod
     when: on_success
+    tags:
+        - docker-cloud
