@@ -12,7 +12,7 @@ deploy_production:
     stage: deploy
     before_script:
         - corepack enable
-        - cp $BUILD_ENV .dev.vars
+        - cp $BUILD_ENV .env
     script:
         - pnpm install --frozen-lockfile
         - pnpm run build
