@@ -228,8 +228,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem('admin_token'); // Clear from local storage
         }
         
-        // Also set as cookie for middleware access - use localhost-friendly settings
-        const cookieValue = `admin_token=${state.token}; path=/; max-age=${state.rememberMe ? 24 * 60 * 60 : 0}`; // Session cookie if not remember me
+        // Also set as cookie for middleware access - 24 hour max age
+        const cookieValue = `admin_token=${state.token}; path=/; max-age=86400`; // 24 hours = 86400 seconds
         const cookieSettings = isLocalhost 
           ? `${cookieValue}; samesite=lax`  // For localhost, use lax instead of strict
           : `${cookieValue}; secure; samesite=strict`; // For production
@@ -253,7 +253,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem('admin_refresh_token');
         }
         
-        const refreshCookieValue = `admin_refresh_token=${state.refreshToken}; path=/; max-age=${state.rememberMe ? 7 * 24 * 60 * 60 : 0}`;
+        // Refresh token also 24 hours max age
+        const refreshCookieValue = `admin_refresh_token=${state.refreshToken}; path=/; max-age=86400`; // 24 hours
         const refreshCookieSettings = isLocalhost 
           ? `${refreshCookieValue}; samesite=lax`
           : `${refreshCookieValue}; secure; samesite=strict`;
@@ -286,7 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let intervalId: NodeJS.Timeout;
 
     if (state.isAuthenticated && state.refreshToken) {
-      // Refresh token every 20 minutes (assuming 24h token expiry)
+      // Refresh token every 12 hours (token expires after 24h)
       intervalId = setInterval(async () => {
         try {
           await refreshTokens();
@@ -295,7 +296,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // If refresh fails, logout user
           await logout();
         }
-      }, 20 * 60 * 1000); // 20 minutes
+      }, 12 * 60 * 60 * 1000); // 12 hours
     }
 
     return () => {
