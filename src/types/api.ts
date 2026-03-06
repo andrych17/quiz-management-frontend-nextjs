@@ -191,6 +191,7 @@ export interface Attempt {
   endDateTime?: string;
   correctAnswers?: number;
   totalQuestions?: number;
+  sessionToken?: string;
   answers?: Array<{
     questionId: number;
     answer: string;

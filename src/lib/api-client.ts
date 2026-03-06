@@ -58,7 +58,10 @@ export class BaseApiClient {
     const executeRequest = async (): Promise<ApiResponse<T>> => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        // Longer timeout for write operations (POST/PUT/DELETE) which may take more time
+        const isWriteOp = options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE';
+        const timeoutMs = isWriteOp ? 60000 : 30000;
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         const response = await fetch(url, {
           ...options,
@@ -118,11 +121,11 @@ export class BaseApiClient {
     // Use retry mechanism if enabled
     if (enableRetry) {
       return withRetry(executeRequest, {
-        maxAttempts: 3,
-        initialDelayMs: 1000,
-        maxDelayMs: 5000,
+        maxAttempts: 5,
+        initialDelayMs: 2000,
+        maxDelayMs: 10000,
         onRetry: (attempt, error) => {
-          console.warn(`Retrying request (attempt ${attempt}/3):`, endpoint, error.message);
+          console.warn(`[Retry ${attempt}/5] ${endpoint}:`, error.message);
         },
       });
     }
@@ -836,13 +839,21 @@ export class PublicAPI extends BaseApiClient {
       questionId: number;
       answer: string;
     }>;
-  }): Promise<ApiResponse<Attempt>> {
+    sessionToken?: string;
+  }, sessionToken?: string): Promise<ApiResponse<Attempt>> {
+    // Send sessionToken in the request body (not in header) to avoid
+    // header-stripping issues with proxies / CORS preflight.
+    const payload = { ...submitData };
+    if (sessionToken) {
+      payload.sessionToken = sessionToken;
+    }
+
     // Enable retry and idempotency for quiz submission - critical operation
     return this.request<Attempt>(
       `/public/quiz/${token}/submit`,
       {
         method: 'POST',
-        body: JSON.stringify(submitData),
+        body: JSON.stringify(payload),
       },
       true,  // Enable retry
       true   // Enable idempotency

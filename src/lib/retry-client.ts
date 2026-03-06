@@ -22,13 +22,21 @@ const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
 };
 
 export class RetryableError extends Error {
+  public readonly isNetworkError: boolean;
+
   constructor(
     message: string,
     public statusCode?: number,
     public isRetryable: boolean = false,
+    public readonly originalError?: Error,
   ) {
-    super(message);
+    super(message, { cause: originalError });
     this.name = 'RetryableError';
+    this.isNetworkError =
+      !statusCode ||
+      statusCode === 0 ||
+      (originalError?.message ?? '').toLowerCase().includes('fetch') ||
+      (originalError?.message ?? '').toLowerCase().includes('network');
   }
 }
 
@@ -93,10 +101,19 @@ export async function withRetry<T>(
 
       // Don't retry if it's the last attempt
       if (attempt === finalConfig.maxAttempts) {
+        const isNetwork =
+          !error.statusCode ||
+          error.statusCode === 0 ||
+          error.message?.toLowerCase().includes('fetch') ||
+          error.message?.toLowerCase().includes('network');
+        const userMessage = isNetwork
+          ? `Koneksi ke server gagal setelah ${attempt} percobaan. Pastikan koneksi internet Anda stabil dan coba lagi.`
+          : `Gagal setelah ${attempt} percobaan: ${error.message}`;
         throw new RetryableError(
-          `Failed after ${attempt} attempts: ${error.message}`,
+          userMessage,
           error.statusCode,
           false,
+          error instanceof Error ? error : new Error(String(error)),
         );
       }
 

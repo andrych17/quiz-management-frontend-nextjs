@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { API } from '@/lib/api-client';
 import { Quiz, Question, ApiError } from '@/types/api';
 import { getAbsoluteImageUrl } from '@/lib/constants/api';
+import { RetryableError } from '@/lib/retry-client';
 
 export default function PublicQuizPage() {
   const params = useParams();
@@ -33,6 +34,7 @@ export default function PublicQuizPage() {
   const [showStartWarning, setShowStartWarning] = useState(false);
   const [isResumingQuiz, setIsResumingQuiz] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
@@ -64,6 +66,17 @@ export default function PublicQuizPage() {
         const now = new Date();
         const end = new Date(attemptData.endDateTime);
 
+        // If time expired and user gave no answers, discard stale data
+        // so they can start fresh via the backend
+        const savedAnswers = attemptData.answers || {};
+        const hasAnswers = Object.keys(savedAnswers).length > 0;
+
+        if (now > end && !hasAnswers) {
+          console.log('🗑️ Stale attempt with no answers — clearing localStorage');
+          localStorage.removeItem(storageKey);
+          return; // show start form instead of resuming
+        }
+
         // Resume quiz from localStorage (even if time has expired — allow submit)
         console.log('✅ Resuming quiz from localStorage...');
         setIsResumingQuiz(true);
@@ -75,6 +88,7 @@ export default function PublicQuizPage() {
           serviceKey: attemptData.serviceKey || ''
         });
         setAttemptId(attemptData.attemptId);
+        setSessionToken(attemptData.sessionToken || null);
         setStartDateTime(attemptData.startDateTime);
         setEndDateTime(attemptData.endDateTime);
         setCurrentAnswers(attemptData.answers || {});
@@ -191,6 +205,7 @@ export default function PublicQuizPage() {
     const storageKey = `quiz_attempt_${quiz.id}`;
     const attemptData = {
       attemptId,
+      sessionToken,
       quizId: quiz.id,
       participantName: participantInfo.name,
       email: participantInfo.email,
@@ -276,6 +291,7 @@ export default function PublicQuizPage() {
       
       // Save to state
       setAttemptId(attemptData.id);
+      setSessionToken(attemptData.sessionToken || null);
       setStartDateTime(validStartDateTime);
       setEndDateTime(validEndDateTime);
       setQuizStartTime(new Date(validStartDateTime));
@@ -310,6 +326,7 @@ export default function PublicQuizPage() {
       
       const localData = {
         attemptId: attemptData.id,
+        sessionToken: attemptData.sessionToken || null,
         quizId: quiz.id,
         participantName: participantInfo.name,
         email: participantInfo.email,
@@ -359,7 +376,7 @@ export default function PublicQuizPage() {
         serviceKey: participantInfo.serviceKey,
         quizId: quiz.id,
         answers: answersArray
-      });
+      }, sessionToken || undefined);
     } catch (err: any) {
       console.error('Failed to auto-save answers:', err);
       // Don't show error to user for auto-save failures
@@ -586,7 +603,7 @@ export default function PublicQuizPage() {
         serviceKey: participantInfo.serviceKey,
         quizId: quiz.id,
         answers: answersArray
-      });
+      }, sessionToken || undefined);
 
       if (response.success) {
         // Clear localStorage for this quiz attempt
@@ -622,7 +639,24 @@ export default function PublicQuizPage() {
       }
     } catch (err: any) {
       console.error('Submit failed:', err);
-      setError('Gagal mengirim jawaban. Silakan coba lagi.');
+
+      // Answers are still saved in localStorage — reassure the user
+      let errorMsg: string;
+      if (err instanceof RetryableError && err.isNetworkError) {
+        errorMsg =
+          'Tidak dapat terhubung ke server. Jawaban Anda tersimpan secara lokal. ' +
+          'Periksa koneksi internet Anda lalu tekan "Submit" sekali lagi.';
+      } else if (err instanceof RetryableError) {
+        errorMsg = err.message;
+      } else if (err?.message?.toLowerCase().includes('timeout')) {
+        errorMsg =
+          'Server terlalu lama merespons. Jawaban Anda tersimpan secara lokal. ' +
+          'Silakan coba submit kembali.';
+      } else {
+        errorMsg = 'Gagal mengirim jawaban. Silakan coba lagi.';
+      }
+
+      setError(errorMsg);
     } finally {
       setIsSubmitting(false);
       setShowConfirmSubmit(false);
