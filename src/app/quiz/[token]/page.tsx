@@ -153,8 +153,10 @@ export default function PublicQuizPage() {
         // The API returns the quiz directly in data with questions as a property
         setQuiz(response.data);
         
-        // Use actual questions from API
-        const quizQuestions = response.data.questions || [];
+        // Use actual questions from API — always sort by order field so display is deterministic
+        const quizQuestions = (response.data.questions || []).sort(
+          (a: Question, b: Question) => (a.order ?? 0) - (b.order ?? 0)
+        );
         
         setQuestions(quizQuestions);
       } else {
