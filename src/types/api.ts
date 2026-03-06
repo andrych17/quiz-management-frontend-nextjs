@@ -122,6 +122,7 @@ export interface Quiz {
   images?: QuizImage[];
   scoringTemplates?: QuizScoring[];
   questions?: Question[];
+  activeAttemptsCount?: number;
 }
 
 export interface QuizImage {

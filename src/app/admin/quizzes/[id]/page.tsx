@@ -105,6 +105,9 @@ export default function QuizDetailPage({ params }: PageProps) {
   const [editingScoring, setEditingScoring] = useState<{ correctAnswer: number, score: number } | null>(null);
   const [scoringType, setScoringType] = useState<'linear' | 'iq-conversion'>('iq-conversion');
 
+  // Active attempts count (participants currently taking this quiz)
+  const [activeAttemptsCount, setActiveAttemptsCount] = useState<number>(0);
+
   // Quiz URL state
   const [shortUrl, setShortUrl] = useState<string>('');
   const [normalUrl, setNormalUrl] = useState<string>('');
@@ -256,6 +259,9 @@ export default function QuizDetailPage({ params }: PageProps) {
         // Set quiz URLs for link display
         setShortUrl(quizData.shortUrl || '');
         setNormalUrl(quizData.normalUrl || '');
+
+        // Set active attempts count
+        setActiveAttemptsCount(quizData.activeAttemptsCount || 0);
 
         // Set metadata
         setMetadata({
@@ -1423,6 +1429,18 @@ export default function QuizDetailPage({ params }: PageProps) {
         {/* Scoring Tab */}
         {activeTab === 'scoring' && (
           <div className="space-y-4">
+            {activeAttemptsCount > 0 && (
+              <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4 flex items-start gap-3">
+                <span className="text-red-500 text-xl mt-0.5">⚠️</span>
+                <div>
+                  <p className="font-semibold text-red-800">Quiz sedang dikerjakan!</p>
+                  <p className="text-sm text-red-700 mt-1">
+                    Ada <strong>{activeAttemptsCount} peserta</strong> yang sedang mengerjakan quiz ini.
+                    Perubahan scoring <strong>tidak dapat disimpan</strong> sampai semua peserta selesai.
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="space-y-4">
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-4">Pemetaan Scoring</h3>
