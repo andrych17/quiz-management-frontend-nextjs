@@ -64,15 +64,7 @@ export default function PublicQuizPage() {
         const now = new Date();
         const end = new Date(attemptData.endDateTime);
 
-        // Validate time locally first
-        if (now > end) {
-          // Time expired - clear localStorage
-          localStorage.removeItem(storageKey);
-          setError('Waktu pengerjaan quiz telah habis. Silakan hubungi administrator.');
-          return;
-        }
-
-        // Resume quiz from localStorage
+        // Resume quiz from localStorage (even if time has expired — allow submit)
         console.log('✅ Resuming quiz from localStorage...');
         setIsResumingQuiz(true);
         setParticipantInfo({
@@ -89,11 +81,15 @@ export default function PublicQuizPage() {
         setCurrentQuestionIndex(attemptData.currentPage || 0);
         setShowQuiz(true);
         
-        // Calculate remaining time
+        // Calculate remaining time; if already expired set to 0 (locks questions, submit still allowed)
         const remainingMs = end.getTime() - now.getTime();
-        setTimeLeft(Math.floor(remainingMs / 1000));
+        setTimeLeft(remainingMs > 0 ? Math.floor(remainingMs / 1000) : 0);
 
-        console.log('✅ Quiz resumed successfully - Timer:', Math.floor(remainingMs / 1000), 'seconds remaining');
+        if (now > end) {
+          console.log('⏰ Quiz time expired — resuming in locked mode (submit only)');
+        } else {
+          console.log('✅ Quiz resumed successfully - Timer:', Math.floor(remainingMs / 1000), 'seconds remaining');
+        }
       } catch (error) {
         console.error('Failed to restore quiz from localStorage:', error);
         localStorage.removeItem(storageKey);
@@ -1297,8 +1293,8 @@ export default function PublicQuizPage() {
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-xl sm:text-2xl">⚠️</span>
             <div>
-              <p className="text-sm sm:text-base font-semibold">Time Running Out!</p>
-              <p className="text-xs sm:text-sm">Quiz will auto-submit in {timeLeft} seconds</p>
+              <p className="text-sm sm:text-base font-semibold">Waktu Hampir Habis!</p>
+              <p className="text-xs sm:text-sm">Sisa waktu: {timeLeft} detik</p>
             </div>
           </div>
         </div>
