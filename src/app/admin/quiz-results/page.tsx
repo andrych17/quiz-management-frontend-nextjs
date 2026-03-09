@@ -562,50 +562,35 @@ export default function QuizResultsPage() {
       },
     },
     {
-      key: 'submittedAt',
-      label: 'Status',
+      key: 'startedAt',
+      label: 'Started',
       sortable: true,
       render: (value: unknown, row: QuizResult) => {
-        const hasSubmitted = !!row.submittedAt;
-        const isCompleted = !!row.completedAt;
-        
-        if (hasSubmitted) {
+        if (!row.startedAt) {
+          return <div className="text-sm text-gray-400">-</div>;
+        }
+        return (
+          <div className="text-sm text-gray-700">
+            {formatDateTime(row.startedAt)}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'submittedAt',
+      label: 'Submitted',
+      sortable: true,
+      render: (value: unknown, row: QuizResult) => {
+        if (row.submittedAt) {
           return (
-            <div className="text-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
-                <span className="font-medium text-green-700">Completed</span>
-              </div>
-              <div className="text-xs text-gray-500">
-                {formatDateTime(row.submittedAt)}
-              </div>
-            </div>
-          );
-        } else if (isCompleted) {
-          return (
-            <div className="text-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
-                <span className="font-medium text-blue-700">Completed</span>
-              </div>
-              <div className="text-xs text-gray-500">
-                {formatDateTime(row.completedAt)}
-              </div>
-            </div>
-          );
-        } else {
-          return (
-            <div className="text-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="inline-block w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
-                <span className="font-medium text-yellow-700">In Progress</span>
-              </div>
-              <div className="text-xs text-gray-500">
-                Started: {formatDateTime(row.startedAt)}
-              </div>
+            <div className="text-sm text-gray-700">
+              {formatDateTime(row.submittedAt)}
             </div>
           );
         }
+        return (
+          <div className="text-sm text-gray-400">-</div>
+        );
       },
     },
   ];
