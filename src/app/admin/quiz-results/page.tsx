@@ -554,7 +554,7 @@ export default function QuizResultsPage() {
       },
     },
     {
-      key: 'completedAt',
+      key: 'submittedAt',
       label: 'Status',
       sortable: true,
       render: (value: unknown, row: QuizResult) => {
