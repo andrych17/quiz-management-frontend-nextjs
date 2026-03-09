@@ -328,7 +328,9 @@ export default function QuizResultsPage() {
 
       // Build query params from current filters
       const queryParams = new URLSearchParams();
-      // Changed: Filter by Quiz Name instead of ID
+      if (filterValues.search) {
+        queryParams.append('search', String(filterValues.search));
+      }
       if (filterValues.quizName) {
         queryParams.append('quizName', String(filterValues.quizName));
       }
@@ -343,6 +345,12 @@ export default function QuizResultsPage() {
       }
       if (filterValues.passStatus) {
         queryParams.append('passStatus', String(filterValues.passStatus));
+      }
+      if (filterValues.startDate) {
+        queryParams.append('startDate', String(filterValues.startDate));
+      }
+      if (filterValues.endDate) {
+        queryParams.append('endDate', String(filterValues.endDate));
       }
       if (sortConfig.field) {
         queryParams.append('sortField', sortConfig.field);

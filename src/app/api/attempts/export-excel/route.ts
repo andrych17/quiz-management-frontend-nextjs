@@ -19,6 +19,13 @@ export async function GET(request: NextRequest) {
       const quizName = searchParams.get('quizName');
       const serviceKey = searchParams.get('serviceKey');
       const locationKey = searchParams.get('locationKey');
+      const submissionStatus = searchParams.get('submissionStatus');
+      const passStatus = searchParams.get('passStatus');
+      const sortField = searchParams.get('sortField');
+      const sortDirection = searchParams.get('sortDirection');
+      const search = searchParams.get('search');
+      const startDate = searchParams.get('startDate');
+      const endDate = searchParams.get('endDate');
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
       
@@ -27,6 +34,13 @@ export async function GET(request: NextRequest) {
       if (quizName) queryParams.append('quizName', quizName);
       if (serviceKey) queryParams.append('serviceKey', serviceKey);
       if (locationKey) queryParams.append('locationKey', locationKey);
+      if (submissionStatus) queryParams.append('submissionStatus', submissionStatus);
+      if (passStatus) queryParams.append('passStatus', passStatus);
+      if (sortField) queryParams.append('sortField', sortField);
+      if (sortDirection) queryParams.append('sortDirection', sortDirection);
+      if (search) queryParams.append('search', search);
+      if (startDate) queryParams.append('startDate', startDate);
+      if (endDate) queryParams.append('endDate', endDate);
 
       const queryString = queryParams.toString();
       const url = `${backendUrl}/api/attempts/export-excel${queryString ? `?${queryString}` : ''}`;
