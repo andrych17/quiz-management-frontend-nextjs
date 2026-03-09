@@ -267,8 +267,8 @@ export class QuizzesAPI extends BaseApiClient {
       
       // Add sort parameters
       if (params.sort) {
-        queryParams.append('sort', params.sort.field);
-        queryParams.append('order', params.sort.direction);
+        queryParams.append('sortBy', params.sort.field);
+        queryParams.append('sortOrder', params.sort.direction);
       }
       
       // Add pagination parameters
@@ -481,6 +481,9 @@ export class AttemptsAPI extends BaseApiClient {
     quizId?: number;
     startDate?: string;
     endDate?: string;
+    sortField?: string;
+    sortDirection?: string;
+    [key: string]: string | number | boolean | undefined;
   }): Promise<ApiResponse<any>> {
     const queryParams = new URLSearchParams();
     if (params) {

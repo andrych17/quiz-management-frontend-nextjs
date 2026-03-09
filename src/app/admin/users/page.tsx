@@ -39,7 +39,9 @@ export default function UsersPage() {
       const params = {
         page,
         limit,
-        ...memoizedFilterValues // Apply filters
+        ...memoizedFilterValues,
+        sortBy: sortConfig.field,
+        sortOrder: sortConfig.direction,
       };
       const res = await API.users.getUsers(params);
       // Handle paginated response
@@ -60,7 +62,7 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, memoizedFilterValues]);
+  }, [page, limit, memoizedFilterValues, sortConfig]);
 
   const loadConfigOptions = useCallback(async () => {
     try {
@@ -326,6 +328,7 @@ export default function UsersPage() {
 
   const handleSort = useCallback((field: string, direction: 'ASC' | 'DESC') => {
     setSortConfig({ field, direction });
+    setPage(1);
   }, []);
 
   const handleLimitChange = useCallback((newLimit: number) => {

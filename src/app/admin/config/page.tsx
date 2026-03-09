@@ -36,7 +36,9 @@ export default function ConfigPage() {
       const params = {
         page,
         limit,
-        ...memoizedFilterValues
+        ...memoizedFilterValues,
+        sortBy: sortConfig.field,
+        sortOrder: sortConfig.direction,
       };
       const response = await ConfigAPI.getConfigs(params);
       if (response.success && response.data) {
@@ -84,7 +86,7 @@ export default function ConfigPage() {
         setIsRefetching(false);
       }
     }
-  }, [page, limit, memoizedFilterValues]);
+  }, [page, limit, memoizedFilterValues, sortConfig]);
 
   // Load data effect - handles both initial load and refetches
   useEffect(() => {
@@ -145,6 +147,7 @@ export default function ConfigPage() {
     {
       key: "group",
       label: "Group",
+      sortable: true,
       render: (value: unknown) => (
         <span className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-800 border border-blue-200">
           <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,6 +160,7 @@ export default function ConfigPage() {
     {
       key: "key",
       label: "Key",
+      sortable: true,
       render: (value: unknown) => (
         <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
           {String(value)}

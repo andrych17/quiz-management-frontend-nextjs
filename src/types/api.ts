@@ -274,6 +274,8 @@ export interface UserFilterParams extends PaginationParams {
   location?: string;
   service?: string;
   isActive?: string | boolean;
+  sortBy?: string;
+  sortOrder?: string;
 }
 
 export interface CreateQuizDto {
