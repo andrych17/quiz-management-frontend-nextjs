@@ -185,6 +185,12 @@ export default function QuizResultsPage() {
         apiParams.passStatus = currentFilters.passStatus;
       }
 
+      // Add sort
+      if (currentSort.field) {
+        apiParams.sortField = currentSort.field;
+        apiParams.sortDirection = currentSort.direction;
+      }
+
       const response = await API.attempts.getAttempts(apiParams);
 
       if (response.success && response.data) {
@@ -544,7 +550,7 @@ export default function QuizResultsPage() {
       },
     },
     {
-      key: 'submittedAt',
+      key: 'completedAt',
       label: 'Status',
       sortable: true,
       render: (value: unknown, row: QuizResult) => {

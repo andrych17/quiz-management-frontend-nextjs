@@ -159,7 +159,7 @@ export function Sidebar({ onLogout, isOpen = false, onClose }: SidebarProps) {
         </button>
         <div className="text-center text-xs text-gray-400 mt-4 font-medium">
           © 2025 Logic Test System
-          <div className="mt-0.5">v1.0.3</div>
+          <div className="mt-0.5">v1.0.4</div>
         </div>
       </div>
     </div>
