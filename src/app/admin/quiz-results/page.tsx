@@ -344,6 +344,10 @@ export default function QuizResultsPage() {
       if (filterValues.passStatus) {
         queryParams.append('passStatus', String(filterValues.passStatus));
       }
+      if (sortConfig.field) {
+        queryParams.append('sortField', sortConfig.field);
+        queryParams.append('sortDirection', sortConfig.direction);
+      }
 
       const queryString = queryParams.toString();
       const endpoint = `/api/attempts/export-excel${queryString ? `?${queryString}` : ''}`;
